@@ -1,6 +1,16 @@
 import os
-
+from dotenv import load_dotenv
 from fastapi import FastAPI
+
+# Load environment from .env, while allowing real env to override
+load_dotenv(override=False)
+
+# Require API_KEY to be set for the server to run
+API_KEY = os.getenv("API_KEY")
+if not API_KEY:
+    import sys
+    print("ERROR: API_KEY is not set in environment or .env", file=sys.stderr)
+    raise SystemExit(1)
 
 app = FastAPI()
 
