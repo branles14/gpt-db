@@ -24,20 +24,6 @@ async def require_api_key(x_api_key: str | None = Header(default=None)):
 
 @app.get("/")
 async def root():
-    return {
-        "name": "gpt-db",
-        "status": "ready",
-        "health": "/health",
-        "docs": "/docs"
-    }
-
-@app.get("/health")
-async def health(_: None = Depends(require_api_key)):
-    return {"status": "ok"}
-
-# Convenience alias in case users expect an /api path
-@app.get("/api/health")
-async def api_health(_: None = Depends(require_api_key)):
     return {"status": "ok"}
 
 if __name__ == "__main__":
