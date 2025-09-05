@@ -1,0 +1,19 @@
+# --- Python junk ---
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+
+# --- Virtualenv ---
+.venv/
+
+# --- Secrets ---
+.env
+
+# --- IDEs / editors ---
+.vscode/
+.idea/
+*.swp
+*.kate-swp
+*~

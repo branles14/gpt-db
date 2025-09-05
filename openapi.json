@@ -1,0 +1,41 @@
+{
+  "openapi": "3.1.0",
+  "info": { "title": "BananaFuel API", "version": "1.0.0" },
+  "servers": [{ "url": "https://api.yourdomain.tld" }],
+  "paths": {
+    "/foods/search": {
+      "get": {
+        "operationId": "searchFoods",
+        "parameters": [
+          { "name": "q", "in": "query", "required": true, "schema": { "type": "string" } },
+          { "name": "limit", "in": "query", "required": false, "schema": { "type": "integer", "default": 20 } }
+        ]
+      }
+    },
+    "/entries": {
+      "post": {
+        "operationId": "createEntry",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "user_id": { "type": "string" },
+                "food_id": { "type": "string" },
+                "datetime": { "type": "string" },
+                "amount": { "type": "object", "properties": {
+                  "value": { "type": "number" },
+                  "unit": { "type": "string", "enum": ["g"] }
+                }, "required": ["value","unit"]},
+                "note": { "type": "string" }
+              },
+              "required": ["food_id","amount"]
+            }
+          }}
+        }
+      }
+    }
+  },
+  "components": {}
+}
