@@ -1,19 +1,28 @@
 # gpt-db
 
-Minimal FastAPI app with a `/health` endpoint secured by an API key. Designed to deploy on Vercel.
+Experimental API to enhance ChatGPT's logging abilities. Built with FastAPI and designed for Vercel.
 
-## Usage
+## Endpoints
 
-Install dependencies and configure the environment. Configuration is read from environment variables or an optional `.env` file. At a minimum, define an `API_KEY`:
+- `/`: Health check (no auth). Returns `{ "status": "ok" }` when the API is up.
+- `/list`: Lists MongoDB collections across accessible databases. Requires `x-api-key` header.
+
+## Setup & Local Run
+
+1) Install dependencies and configure env:
 
 ```bash
 pip install -r requirements.txt
 cp .env.example .env
-echo "API_KEY=your_api_key" >> .env
-# optional: echo "PORT=9000" >> .env
 ```
 
-Run the server locally (defaults to port `8000`):
+2) Set required variables in `.env`:
+
+- `API_KEY`: any string you choose; used for `/list` auth.
+- `MONGO_URI`: Atlas connection string (recommended). Example:
+  `mongodb+srv://<user>:<pass>@<cluster>/?retryWrites=true&w=majority`
+
+3) Start the server (defaults to port `8000`):
 
 ```bash
 uvicorn main:app --host 0.0.0.0 --port "${PORT:-8000}"
@@ -21,59 +30,51 @@ uvicorn main:app --host 0.0.0.0 --port "${PORT:-8000}"
 python main.py
 ```
 
-Check the health endpoint (requires `x-api-key` header matching `API_KEY`):
+## Usage Examples (curl)
 
-```bash
-curl -sS -H "x-api-key: your_api_key" http://localhost:${PORT:-8000}/health
-# -> {"status":"ok"}
-```
-
-If the header is missing or incorrect, it responds with `401`:
-
-```bash
-curl -sS http://localhost:${PORT:-8000}/health
-# -> {"detail":"Invalid API key"}
-```
-
-There is also a simple root endpoint to confirm the app is reachable:
+- API health:
 
 ```bash
 curl -sS http://localhost:${PORT:-8000}/
-# -> {"name":"gpt-db","status":"ready",...}
+# -> {"status":"ok"}
+```
+
+- List MongoDB collections (requires API key):
+
+```bash
+curl -sS \
+  -H "x-api-key: ${API_KEY}" \
+  http://localhost:${PORT:-8000}/list
+# -> {"databases":[{"name":"mydb","collections":["logs","events", ...]}, ...]}
+```
+
+If MongoDB is unreachable or misconfigured, `/list` responds with `503` and a JSON error:
+
+```json
+{"detail":{"error":"Failed to connect to MongoDB","reason":"<message>"}}
 ```
 
 ## Deployment (Vercel)
 
-This repo is configured for Vercel’s Python runtime.
+Configured for Vercel’s Python runtime via `vercel.json`:
 
-- `vercel.json` builds `main.py` with `@vercel/python` and routes all paths to it, using the ASGI entrypoint `main:app`.
-- Set `API_KEY` in your Vercel Project Settings → Environment Variables.
+- Builds `main.py` with `@vercel/python` and entrypoint `main:app`.
+- Routes all paths to `main.py`.
 
-Deploy with the [Vercel CLI](https://vercel.com/docs/cli) or Git integration. After deploy, verify:
+Set environment variables in Vercel Project Settings:
+
+- `API_KEY`
+- `MONGO_URI` (Atlas connection string)
+
+After deploy, verify:
 
 ```bash
-# Health check (replace <project> with your domain)
-curl -sS -H "x-api-key: your_api_key" https://<project>.vercel.app/health
+# Health (no auth)
+curl -sS https://<project>.vercel.app/
 # -> {"status":"ok"}
 
-# Root endpoint (no auth)
-curl -sS https://<project>.vercel.app/
-# -> {"name":"gpt-db","status":"ready",...}
+# Collections (with auth)
+curl -sS -H "x-api-key: ${API_KEY}" https://<project>.vercel.app/list
 ```
 
-### Common 404 on root
-
-If you previously saw `404: NOT_FOUND` at `/`, it usually means the root path wasn’t routed to your app. This repo’s `vercel.json` includes a route to send all paths to `main.py`:
-
-```json
-{
-  "builds": [
-    { "src": "main.py", "use": "@vercel/python", "config": { "entrypoint": "main:app" } }
-  ],
-  "routes": [
-    { "src": "/(.*)", "dest": "main.py" }
-  ]
-}
-```
-
-Make sure you’ve redeployed after adding routes and that `API_KEY` is set in Vercel.
+If you get `404: NOT_FOUND` on `/`, ensure you redeployed with the included `vercel.json` routing.
