@@ -54,11 +54,21 @@ If MongoDB is unreachable or misconfigured, `/list` responds with `503` and a JS
 {"detail":{"error":"Failed to connect to MongoDB","reason":"<message>"}}
 ```
 
+## Project Structure
+
+- `main.py`: Thin entrypoint that imports `app.app` for Vercel/uvicorn.
+- `app/`: Application package
+  - `app/main.py`: Creates the FastAPI application and mounts routes
+  - `app/api/routes.py`: Route definitions (`/`, `/list`)
+  - `app/api/deps.py`: Shared dependencies (e.g., API key auth)
+  - `app/db/mongo.py`: MongoDB client and helpers
+  - `app/core/env.py`: Environment variable helpers and dotenv loading
+
 ## Deployment (Vercel)
 
 Configured for Vercel’s Python runtime via `vercel.json`:
 
-- Builds `main.py` with `@vercel/python` and entrypoint `main:app`.
+- Builds `main.py` with `@vercel/python` and entrypoint `main:app` (which imports `app.app`).
 - Routes all paths to `main.py`.
 
 Set environment variables in Vercel Project Settings:
