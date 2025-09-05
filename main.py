@@ -9,7 +9,6 @@ load_dotenv(override=False)
 # Read API_KEY; if missing, don't crash in serverless envs.
 API_KEY = os.getenv("API_KEY") or None
 
-#
 # Ensure PORT is an int for uvicorn
 PORT = int(os.getenv("PORT", "8000"))
 
@@ -25,6 +24,10 @@ async def require_api_key(x_api_key: str | None = Header(default=None)):
 @app.get("/")
 async def root():
     return {"status": "ok"}
+
+@app.get("/list")
+async def health(_: None = Depends(require_api_key)):
+    return {"foo": "bar"}
 
 if __name__ == "__main__":
     import uvicorn
