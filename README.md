@@ -4,11 +4,21 @@ Minimal FastAPI app exposing a single `/health` endpoint.
 
 ## Usage
 
-Set `PORT` to change the listening port (defaults to `8000`), then launch the server:
+Install dependencies and configure the environment. Configuration is read from environment variables or an optional `.env` file. At a minimum, define an `API_KEY`:
 
 ```bash
-# optional: export PORT=9000
+pip install -r requirements.txt
+cp .env.example .env
+echo "API_KEY=your_api_key" >> .env
+# optional: echo "PORT=9000" >> .env
+```
+
+Run the server (defaults to port `8000`):
+
+```bash
 uvicorn main:app --port "${PORT:-8000}"
+# or
+python main.py
 ```
 
 Check the health endpoint:
