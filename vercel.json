@@ -1,0 +1,11 @@
+{
+  "builds": [
+    {
+      "src": "main.py",
+      "use": "@vercel/python",
+      "config": {
+        "entrypoint": "main:app"
+      }
+    }
+  ]
+}

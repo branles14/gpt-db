@@ -22,3 +22,14 @@ The endpoint responds with:
 ```json
 {"status": "ok"}
 ```
+
+## Deployment
+
+The included `vercel.json` configures Vercel to build `main.py` with `@vercel/python` and serve the FastAPI app via the `main:app` entry point.
+
+Deploy with the [Vercel CLI](https://vercel.com/docs/cli) and then verify the health endpoint:
+
+```bash
+# after `vercel deploy`
+curl https://<your-project>.vercel.app/health
+```
