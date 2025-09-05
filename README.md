@@ -1,6 +1,6 @@
 # gpt-db
 
-Minimal FastAPI app exposing a single `/health` endpoint.
+Minimal FastAPI app exposing a single `/health` endpoint secured by an API key.
 
 ## Usage
 
@@ -16,21 +16,27 @@ echo "API_KEY=your_api_key" >> .env
 Run the server (defaults to port `8000`):
 
 ```bash
-uvicorn main:app --port "${PORT:-8000}"
+uvicorn main:app --host 0.0.0.0 --port "${PORT:-8000}"
 # or
 python main.py
 ```
 
-Check the health endpoint:
+Check the health endpoint (requires `x-api-key` header matching `API_KEY`):
 
 ```bash
-curl http://localhost:${PORT:-8000}/health
+curl -H "x-api-key: your_api_key" http://localhost:${PORT:-8000}/health
 ```
 
 The endpoint responds with:
 
 ```json
 {"status": "ok"}
+
+If the header is missing or incorrect, it responds with `401`:
+
+```json
+{"detail": "Invalid API key"}
+```
 ```
 
 ## Deployment
