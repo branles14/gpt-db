@@ -24,6 +24,15 @@ async def require_api_key(x_api_key: str | None = Header(default=None)):
     if x_api_key != API_KEY:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid API key")
 
+@app.get("/")
+async def root():
+    return {
+        "name": "gpt-db",
+        "status": "ready",
+        "health": "/health",
+        "docs": "/docs"
+    }
+
 @app.get("/health")
 async def health(_: None = Depends(require_api_key)):
     return {"status": "ok"}
