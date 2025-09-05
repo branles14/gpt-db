@@ -7,12 +7,24 @@ from bson import ObjectId
 import os
 
 from dotenv import load_dotenv
+
 load_dotenv()
+
+API_KEY = os.getenv("API_KEY")
+if not API_KEY:
+    raise RuntimeError("API_KEY environment variable not set")
+
+mongo_user = os.getenv("MONGO_USER")
+mongo_pass = os.getenv("MONGO_PASS")
+mongo_host = os.getenv("MONGO_HOST", "mongo:27017")
+if mongo_user and mongo_pass:
+    MONGO_URL = f"mongodb://{mongo_user}:{mongo_pass}@{mongo_host}"
+else:
+    MONGO_URL = os.getenv("MONGO_URL", f"mongodb://{mongo_host}")
 
 app = FastAPI(title="BananaFuel", version="1.0.0")
 
 # ---- Mongo setup ----
-MONGO_URL = os.environ.get("MONGO_URL", "mongodb://mongo:27017")
 client = AsyncIOMotorClient(MONGO_URL)
 db = client.bananafuel
 
