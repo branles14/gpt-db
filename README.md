@@ -51,7 +51,13 @@ curl -sS \
 If MongoDB is unreachable or misconfigured, `/list` responds with `503` and a JSON error:
 
 ```json
-{"detail":{"error":"Failed to connect to MongoDB","reason":"<message>"}}
+{
+  "error": true,
+  "type": "DatabaseAuthenticationError",
+  "message": "Unable to connect to MongoDB: authentication failed. Please check your username, password, or connection string.",
+  "code": 8000,
+  "service": "MongoDB Atlas"
+}
 ```
 
 ## Troubleshooting Mongo Auth
