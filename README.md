@@ -54,6 +54,18 @@ If MongoDB is unreachable or misconfigured, `/list` responds with `503` and a JS
 {"detail":{"error":"Failed to connect to MongoDB","reason":"<message>"}}
 ```
 
+## Troubleshooting Mongo Auth
+
+- Wrong password/URI: Ensure `MONGO_URI` has the correct username and password. If building from separate vars, verify `MONGO_PASS` is used (not a duplicated username).
+- Special characters: If your password has `@`, `:`, `/`, `#`, or spaces, it must be URL-encoded. When using `MONGO_USER/MONGO_PASS/MONGO_HOST`, the app will URL-encode the password for you.
+- Prefer full Atlas URI: You can paste the Atlas-provided SRV string directly into `MONGO_URI`.
+- Quick connectivity test: Use the included script to verify outside FastAPI.
+
+```bash
+python tests/ping-mongo.py
+# Expected: "Pinged your deployment. You successfully connected to MongoDB!"
+```
+
 ## Project Structure
 
 - `main.py`: Thin entrypoint that imports `app.app` for Vercel/uvicorn.
@@ -63,6 +75,7 @@ If MongoDB is unreachable or misconfigured, `/list` responds with `503` and a JS
   - `app/api/deps.py`: Shared dependencies (e.g., API key auth)
   - `app/db/mongo.py`: MongoDB client and helpers
   - `app/core/env.py`: Environment variable helpers and dotenv loading
+    - Builds `MONGO_URI` from `MONGO_USER/MONGO_PASS/MONGO_HOST` if `MONGO_URI` is not set
 
 ## Deployment (Vercel)
 
