@@ -11,3 +11,4 @@ An experimental API to enhance ChatGPT's logging abilities.
 - Follow best practices, and keep the code clean and modular.
 - Project will be deployed on Vercel.
 - Keep the README up-to-date, include detailed usage instructions and examples.
+- Don't bother running tests that you know will fail due to missing variables.
