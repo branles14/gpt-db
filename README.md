@@ -23,6 +23,8 @@ Experimental API to enhance ChatGPT's logging abilities. Built with FastAPI and 
   - `DELETE /food/log/{log_id}` – soft delete a log entry.
   - `POST /food/log/undo` – undo the most recent entry.
 
+Full request/response examples for `/food/catalog`, `/food/stock`, and `/food/log` are available in [app/api/food/README.md](app/api/food/README.md).
+
 ## Setup & Local Run
 
 1) Install dependencies and configure env:
@@ -62,6 +64,26 @@ curl -sS \
   -H "x-api-key: ${API_KEY}" \
   http://localhost:${PORT:-8000}/list
 # -> {"databases":[{"name":"mydb","collections":["logs","events", ...]}, ...]}
+```
+
+- List food catalog (requires API key):
+
+```bash
+curl -sS \
+  -H "x-api-key: ${API_KEY}" \
+  http://localhost:${PORT:-8000}/food/catalog
+# -> {"items": [...]}  # product list
+```
+
+- Upsert a product:
+
+```bash
+curl -sS -X POST \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: ${API_KEY}" \
+  -d '{"upc": "0001", "name": "Apple"}' \
+  http://localhost:${PORT:-8000}/food/catalog
+# -> {"item": {"_id": "...", "upc": "0001", "name": "Apple"}}
 ```
 
 - Read food stock (requires API key):
