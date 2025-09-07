@@ -6,6 +6,9 @@ Experimental API to enhance ChatGPT's logging abilities. Built with FastAPI and 
 
 - `/`: Health check (no auth). Returns `{ "status": "ok" }` when the API is up.
 - `/list`: Lists MongoDB collections across accessible databases. Requires `x-api-key` header.
+- `/food/stock`:
+  - `GET` – returns all documents in the `food.stock` collection.
+  - `POST` – inserts one or more JSON objects into `food.stock`.
 
 ## Setup & Local Run
 
@@ -48,6 +51,26 @@ curl -sS \
 # -> {"databases":[{"name":"mydb","collections":["logs","events", ...]}, ...]}
 ```
 
+- Read food stock (requires API key):
+
+```bash
+curl -sS \
+  -H "x-api-key: ${API_KEY}" \
+  http://localhost:${PORT:-8000}/food/stock
+# -> {"items": [...]}  # complete list of documents
+```
+
+- Add to food stock (requires API key):
+
+```bash
+curl -sS -X POST \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: ${API_KEY}" \
+  -d '[{"name": "apple", "qty": 3}]' \
+  http://localhost:${PORT:-8000}/food/stock
+# -> {"inserted_ids": ["..."]}
+```
+
 If MongoDB is unreachable or misconfigured, `/list` responds with `503` and a JSON error:
 
 ```json
@@ -77,8 +100,10 @@ python tests/ping-mongo.py
 - `main.py`: Thin entrypoint that imports `app.app` for Vercel/uvicorn.
 - `app/`: Application package
   - `app/main.py`: Creates the FastAPI application and mounts routes
-  - `app/api/routes.py`: Route definitions (`/`, `/list`)
+  - `app/api/routes.py`: Root route definitions and sub-router mounting
+  - `app/api/food.py`: `/food/stock` endpoints
   - `app/api/deps.py`: Shared dependencies (e.g., API key auth)
+  - `app/api/utils.py`: Helper utilities (e.g., Mongo error formatting)
   - `app/db/mongo.py`: MongoDB client and helpers
   - `app/core/env.py`: Environment variable helpers and dotenv loading
     - Builds `MONGO_URI` from `MONGO_USER/MONGO_PASS/MONGO_HOST` if `MONGO_URI` is not set
