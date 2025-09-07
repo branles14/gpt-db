@@ -10,8 +10,7 @@ An endpoint for programmatically checking the health of the API and its componen
 {
     "status": "ok",
     "components": {
-        "mongo": "ok",
-        "futureComponent": "ok"
+        "mongo": "ok"
     }
 }
 ```
@@ -25,8 +24,7 @@ An endpoint for programmatically checking the health of the API and its componen
         "mongo": {
             "status": "error",
             "detail": "Event loop is closed"
-        },
-        "futureComponent": "ok"
+        }
     }
 }
 ```
