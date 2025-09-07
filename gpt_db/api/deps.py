@@ -1,6 +1,6 @@
 from fastapi import Header, HTTPException, status
 
-from app.core.env import get_api_key
+from gpt_db.core.env import get_api_key
 
 
 async def require_api_key(x_api_key: str | None = Header(default=None)):

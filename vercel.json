@@ -1,14 +1,14 @@
 {
   "builds": [
     {
-      "src": "app/app.py",
+      "src": "gpt_db/app.py",
       "use": "@vercel/python",
       "config": {
-        "entrypoint": "app.app:app"
+        "entrypoint": "gpt_db.app:app"
       }
     }
   ],
   "routes": [
-    { "src": "/(.*)", "dest": "app/app.py" }
+    { "src": "/(.*)", "dest": "gpt_db/app.py" }
   ]
 }

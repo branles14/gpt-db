@@ -3,7 +3,7 @@ from typing import Any
 from fastapi import HTTPException, status
 from motor.motor_asyncio import AsyncIOMotorClient
 
-from app.core.env import get_mongo_uri
+from gpt_db.core.env import get_mongo_uri
 
 _mongo_client: AsyncIOMotorClient | None = None
 
