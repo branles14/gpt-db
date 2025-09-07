@@ -2,6 +2,10 @@
 
 Experimental API to enhance ChatGPT's logging abilities. Built with FastAPI and designed for Vercel.
 
+## OpenAPI
+
+A unified [OpenAPI 3.1 specification](openapi.yaml) consolidates all routes under a single `paths` section. Each operation has a unique `operationId` and uses the shared server URL `https://gpt-db.vercel.app`.
+
 ## Endpoints
 
 - `/`: Returns `{ "message": "🍌" }` when the API key is valid.
