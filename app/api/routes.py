@@ -9,7 +9,7 @@ from app.api.utils import format_mongo_error
 from app.db.mongo import get_mongo_client
 
 router = APIRouter()
-router.include_router(food_router)
+router.include_router(food_router)  # includes stock and catalog
 
 
 @router.get("/")
