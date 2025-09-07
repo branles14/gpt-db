@@ -1,0 +1,17 @@
+# Food Endpoints
+
+| Purpose                       | Method + Path                       | Notes                                                                      |                                                             |        |       |
+| ----------------------------- | ----------------------------------- | -------------------------------------------------------------------------- | ----------------------------------------------------------- | ------ | ----- |
+| List products (catalog)       | `GET /food/catalog`                 | Optional filters: `q`, `upc`, `tag=...`                                    |                                                             |        |       |
+| Create/Upsert product         | `POST /food/catalog`                | Body = product details; upsert by `upc` if present                         |                                                             |        |       |
+| Read product                  | `GET /food/catalog/{product_id}`    |                                                                            |                                                             |        |       |
+| Delete product                | `DELETE /food/catalog/{product_id}` | **Guard:** block if referenced by stock/log unless `?force=true`           |                                                             |        |       |
+| List stock                    | `GET /food/stock`                   | Aggregated or per-item (see below)                                         |                                                             |        |       |
+| Add stock units               | `POST /food/stock`                  | \`{ upc                                                                    | product\_id, quantity }`(alias to your current`/food/add\`) |        |       |
+| Consume stock (log nutrition) | `POST /food/stock/consume`          | \`{ upc                                                                    | product\_id, units?, servings? }\` atomic dec + log         |        |       |
+| Remove stock (no log)         | `POST /food/stock/remove`           | \`{ upc                                                                    | product\_id, units }`reason:`"spoilage"                     | "lost" | ...\` |
+| Delete specific stock row     | `DELETE /food/stock/{stock_id}`     | Only if you model stock as rows (batches). Not needed for simple counters. |                                                             |        |       |
+| List log (today by default)   | `GET /food/log?date=YYYY-MM-DD`     | Returns entries, totals, remaining-to-target                               |                                                             |        |       |
+| Append log manually           | `POST /food/log`                    | Rare, but useful (custom serving overrides)                                |                                                             |        |       |
+| Delete specific log entry     | `DELETE /food/log/{log_id}`         | Clean reversible deletes                                                   |                                                             |        |       |
+| Undo last log entry           | `POST /food/log/undo`               | Deletes the most recent entry for the ape; ergonomic sugar                 |                                                             |        |       |
