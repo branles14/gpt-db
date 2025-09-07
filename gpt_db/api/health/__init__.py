@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, status
 from fastapi.responses import JSONResponse
 
 from gpt_db.api.deps import require_api_key
-from gpt_db.health import mongo_status
+from .service import mongo_status
 
 router = APIRouter()
 
