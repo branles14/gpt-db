@@ -17,6 +17,11 @@ Experimental API to enhance ChatGPT's logging abilities. Built with FastAPI and 
   - `POST /food/stock/consume` – atomic decrement with log.
   - `POST /food/stock/remove` – decrement with a `reason` (no nutrition log).
   - `DELETE /food/stock/{stock_id}` – remove a specific stock row.
+- `/food/log`:
+  - `GET` – list entries for a day (`date=YYYY-MM-DD`) with totals and remaining targets.
+  - `POST` – append a log entry manually.
+  - `DELETE /food/log/{log_id}` – soft delete a log entry.
+  - `POST /food/log/undo` – undo the most recent entry.
 
 ## Setup & Local Run
 
@@ -99,6 +104,35 @@ curl -sS -X POST \
   -d '{"upc": "0001", "units": 1, "reason": "spoilage"}' \
   http://localhost:${PORT:-8000}/food/stock/remove
 # -> {"remaining": 1}
+```
+
+- View food log for today:
+
+```bash
+curl -sS \
+  -H "x-api-key: ${API_KEY}" \
+  "http://localhost:${PORT:-8000}/food/log"
+# -> {"entries": [...], "totals": {...}, "remaining": {...}}
+```
+
+- Append to the food log manually:
+
+```bash
+curl -sS -X POST \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: ${API_KEY}" \
+  -d '{"upc": "0001", "units": 1}' \
+  http://localhost:${PORT:-8000}/food/log
+# -> {"log_id": "..."}
+```
+
+- Undo the most recent log entry:
+
+```bash
+curl -sS -X POST \
+  -H "x-api-key: ${API_KEY}" \
+  http://localhost:${PORT:-8000}/food/log/undo
+# -> {"deleted_id": "..."}
 ```
 
 If MongoDB is unreachable or misconfigured, `/list` responds with `503` and a JSON error:
