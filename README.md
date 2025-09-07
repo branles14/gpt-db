@@ -6,6 +6,11 @@ Experimental API to enhance ChatGPT's logging abilities. Built with FastAPI and 
 
 - `/`: Health check (no auth). Returns `{ "status": "ok" }` when the API is up.
 - `/list`: Lists MongoDB collections across accessible databases. Requires `x-api-key` header.
+- `/food/catalog`:
+  - `GET` – list products with optional filters (`q`, `upc`, `tag`).
+  - `POST` – create or update a product by `upc`.
+  - `GET /food/catalog/{product_id}` – retrieve a product.
+  - `DELETE /food/catalog/{product_id}` – delete a product (`force=true` to bypass reference checks).
 - `/food/stock`:
   - `GET` – returns all documents in the `food.stock` collection.
   - `POST` – inserts one or more JSON objects into `food.stock`.
@@ -101,7 +106,7 @@ python tests/ping-mongo.py
 - `app/`: Application package
   - `app/main.py`: Creates the FastAPI application and mounts routes
   - `app/api/routes.py`: Root route definitions and sub-router mounting
-  - `app/api/food/`: Module containing `/food/stock` endpoints
+  - `app/api/food/`: Module containing food catalog and stock endpoints
   - `app/api/deps.py`: Shared dependencies (e.g., API key auth)
   - `app/api/utils.py`: Helper utilities (e.g., Mongo error formatting)
   - `app/db/mongo.py`: MongoDB client and helpers
