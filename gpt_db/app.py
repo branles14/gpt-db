@@ -24,15 +24,11 @@ def create_app() -> FastAPI:
 
     application.include_router(router)
 
-    @application.get(
-        "/openapi.json",
-        dependencies=[Depends(require_api_key)],
-        include_in_schema=False,
-    )
+    @application.get("/openapi.json", include_in_schema=False)
     async def openapi() -> JSONResponse:
         return JSONResponse(application.openapi())
 
-    @application.get("/docs", dependencies=[Depends(require_api_key)], include_in_schema=False)
+    @application.get("/docs", include_in_schema=False)
     async def swagger_ui_html():
         return get_swagger_ui_html(openapi_url="/openapi.json", title="docs")
 
