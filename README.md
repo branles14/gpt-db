@@ -43,9 +43,7 @@ cp .env.example .env
 3) Start the server (defaults to port `8000`):
 
 ```bash
-uvicorn main:app --host 0.0.0.0 --port "${PORT:-8000}"
-# or
-python main.py
+uvicorn app.app:app --host 0.0.0.0 --port "${PORT:-8000}"
 ```
 
 ## Usage Examples (curl)
@@ -201,9 +199,8 @@ python tests/ping-mongo.py
 
 ## Project Structure
 
-- `main.py`: Thin entrypoint that imports `app.app` for Vercel/uvicorn.
+- `app/app.py`: Creates the FastAPI application and mounts routes
 - `app/`: Application package
-    - `app/app.py`: Creates the FastAPI application and mounts routes
   - `app/api/routes.py`: Root route definitions and sub-router mounting
   - `app/api/food/`: Module containing food catalog and stock endpoints
   - `app/api/deps.py`: Shared dependencies (e.g., API key auth)
@@ -216,8 +213,8 @@ python tests/ping-mongo.py
 
 Configured for Vercel’s Python runtime via `vercel.json`:
 
-- Builds `main.py` with `@vercel/python` and entrypoint `main:app` (which imports `app.app`).
-- Routes all paths to `main.py`.
+- Builds `app/app.py` with `@vercel/python` and entrypoint `app.app:app`.
+- Routes all paths to `app/app.py`.
 
 Set environment variables in Vercel Project Settings:
 
