@@ -157,6 +157,24 @@ curl -sS -X POST \
 # -> {"deleted_id": "..."}
 ```
 
+## Simulate API usage (CLI)
+
+For quick manual testing without crafting curl commands, a Click-based
+helper script is provided:
+
+```bash
+python tests/simulate-use.py --help
+python tests/simulate-use.py root
+python tests/simulate-use.py list --api-key ${API_KEY} --api-url http://localhost:${PORT:-8000}
+```
+
+Commands mirror the API structure. JSON payloads may be passed directly or
+from a file by prefixing the path with `@`.
+
+```bash
+python tests/simulate-use.py food catalog upsert '{"upc": "0001", "name": "Apple"}'
+```
+
 If MongoDB is unreachable or misconfigured, `/list` responds with `503` and a JSON error:
 
 ```json
