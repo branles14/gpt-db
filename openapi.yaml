@@ -67,6 +67,19 @@ paths:
           application/json:
             schema:
               type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                  description: Human-readable product name
+                upc:
+                  type: string
+                  description: Barcode used for lookups
+                tags:
+                  type: array
+                  items:
+                    type: string
+                  description: Category labels for the product
       responses:
         '201':
           description: Created

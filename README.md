@@ -16,7 +16,7 @@ A unified [OpenAPI 3.1 specification](openapi.yaml) consolidates all routes unde
 - `/redoc`: Interactive API docs. Requires `x-api-key` header.
 - `/food/catalog`:
   - `GET` – list products with optional filters (`q`, `upc`, `tag`).
-  - `POST` – create or update a product by `upc`.
+  - `POST` – create or update a product by `upc`; accepts optional `tags` array.
   - `GET /food/catalog/{product_id}` – retrieve a product.
   - `DELETE /food/catalog/{product_id}` – delete a product (`force=true` to bypass reference checks).
 - `/food/stock`:
@@ -98,9 +98,9 @@ curl -sS \
 curl -sS -X POST \
   -H "Content-Type: application/json" \
   -H "x-api-key: ${API_KEY}" \
-  -d '{"upc": "0001", "name": "Apple"}' \
+  -d '{"upc": "0001", "name": "Apple", "tags": ["fruit"]}' \
   http://localhost:${PORT:-8000}/food/catalog
-# -> {"item": {"_id": "...", "upc": "0001", "name": "Apple"}}
+# -> {"item": {"_id": "...", "upc": "0001", "name": "Apple", "tags": ["fruit"]}}
 ```
 
 - Read food stock (requires API key):
