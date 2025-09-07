@@ -9,7 +9,11 @@ from gpt_db.db.mongo import close_mongo_client, get_mongo_client
 
 def create_app() -> FastAPI:
     application = FastAPI(
-        title="gpt-db", docs_url=None, redoc_url=None, openapi_url=None
+        title="gpt-db",
+        docs_url=None,
+        redoc_url=None,
+        openapi_url=None,
+        servers=[{"url": "https://gpt-db.vercel.app", "description": "Production server"}],
     )
 
     @application.on_event("startup")
