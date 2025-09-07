@@ -239,15 +239,15 @@ After deploy, verify:
 
 ```bash
 # Root
-curl -sS -H "x-api-key: ${API_KEY}" https://<project>.vercel.app/
+curl -sS -H "x-api-key: ${API_KEY}" "${API_URL}"
 # -> {"message":"🍌"}
 
 # Service health
-curl -sS -H "x-api-key: ${API_KEY}" https://<project>.vercel.app/health
+curl -sS -H "x-api-key: ${API_KEY}" "${API_URL}/health"
 # -> {"mongo":{"status":"ok"}}
 
 # Collections
-curl -sS -H "x-api-key: ${API_KEY}" https://<project>.vercel.app/list
+curl -sS -H "x-api-key: ${API_KEY}" "${API_URL}/list"
 ```
 
 If you get `404: NOT_FOUND` on `/`, ensure you redeployed with the included `vercel.json` routing.
