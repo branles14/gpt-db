@@ -203,7 +203,7 @@ python tests/ping-mongo.py
 
 - `main.py`: Thin entrypoint that imports `app.app` for Vercel/uvicorn.
 - `app/`: Application package
-  - `app/main.py`: Creates the FastAPI application and mounts routes
+    - `app/app.py`: Creates the FastAPI application and mounts routes
   - `app/api/routes.py`: Root route definitions and sub-router mounting
   - `app/api/food/`: Module containing food catalog and stock endpoints
   - `app/api/deps.py`: Shared dependencies (e.g., API key auth)
