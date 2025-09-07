@@ -23,7 +23,7 @@ Experimental API to enhance ChatGPT's logging abilities. Built with FastAPI and 
   - `DELETE /food/log/{log_id}` – soft delete a log entry.
   - `POST /food/log/undo` – undo the most recent entry.
 
-Full request/response examples for `/food/catalog`, `/food/stock`, and `/food/log` are available in [app/api/food/README.md](app/api/food/README.md).
+Full request/response examples for `/food/catalog`, `/food/stock`, and `/food/log` are available in [gpt_db/api/food/README.md](gpt_db/api/food/README.md).
 
 ## Setup & Local Run
 
@@ -43,7 +43,7 @@ cp .env.example .env
 3) Start the server (defaults to port `8000`):
 
 ```bash
-uvicorn app.app:app --host 0.0.0.0 --port "${PORT:-8000}"
+uvicorn gpt_db.app:app --host 0.0.0.0 --port "${PORT:-8000}"
 ```
 
 ## Usage Examples (curl)
@@ -199,22 +199,22 @@ python tests/ping-mongo.py
 
 ## Project Structure
 
-- `app/app.py`: Creates the FastAPI application and mounts routes
-- `app/`: Application package
-  - `app/api/routes.py`: Root route definitions and sub-router mounting
-  - `app/api/food/`: Module containing food catalog and stock endpoints
-  - `app/api/deps.py`: Shared dependencies (e.g., API key auth)
-  - `app/api/utils.py`: Helper utilities (e.g., Mongo error formatting)
-  - `app/db/mongo.py`: MongoDB client and helpers
-  - `app/core/env.py`: Environment variable helpers and dotenv loading
+- `gpt_db/app.py`: Creates the FastAPI application and mounts routes
+- `gpt_db/`: Application package
+  - `gpt_db/api/routes.py`: Root route definitions and sub-router mounting
+  - `gpt_db/api/food/`: Module containing food catalog and stock endpoints
+  - `gpt_db/api/deps.py`: Shared dependencies (e.g., API key auth)
+  - `gpt_db/api/utils.py`: Helper utilities (e.g., Mongo error formatting)
+  - `gpt_db/db/mongo.py`: MongoDB client and helpers
+  - `gpt_db/core/env.py`: Environment variable helpers and dotenv loading
     - Builds `MONGO_URI` from `MONGO_USER/MONGO_PASS/MONGO_HOST` if `MONGO_URI` is not set
 
 ## Deployment (Vercel)
 
 Configured for Vercel’s Python runtime via `vercel.json`:
 
-- Builds `app/app.py` with `@vercel/python` and entrypoint `app.app:app`.
-- Routes all paths to `app/app.py`.
+- Builds `gpt_db/app.py` with `@vercel/python` and entrypoint `gpt_db.app:app`.
+- Routes all paths to `gpt_db/app.py`.
 
 Set environment variables in Vercel Project Settings:
 

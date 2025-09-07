@@ -3,10 +3,10 @@ from typing import Any, Dict, List
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import JSONResponse
 
-from app.api.deps import require_api_key
-from app.api.food import router as food_router
-from app.api.utils import format_mongo_error
-from app.db.mongo import get_mongo_client
+from gpt_db.api.deps import require_api_key
+from gpt_db.api.food import router as food_router
+from gpt_db.api.utils import format_mongo_error
+from gpt_db.db.mongo import get_mongo_client
 
 router = APIRouter()
 router.include_router(food_router)  # includes stock and catalog

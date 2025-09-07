@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 
-from app.api.routes import router
+from gpt_db.api.routes import router
 
 
 def create_app() -> FastAPI:

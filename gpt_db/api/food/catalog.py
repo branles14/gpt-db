@@ -4,9 +4,9 @@ from fastapi import APIRouter, Depends, Query, status
 from fastapi.responses import JSONResponse
 from bson import ObjectId, errors as bson_errors
 
-from app.api.deps import require_api_key
-from app.api.utils import format_mongo_error
-from app.db.mongo import get_mongo_client
+from gpt_db.api.deps import require_api_key
+from gpt_db.api.utils import format_mongo_error
+from gpt_db.db.mongo import get_mongo_client
 
 router = APIRouter(prefix="/food", tags=["food"])
 
