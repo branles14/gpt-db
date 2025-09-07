@@ -66,7 +66,7 @@ curl -sS \
 curl -sS \
   -H "x-api-key: ${API_KEY}" \
   http://localhost:${PORT:-8000}/health
-# -> {"status": "ok", "components": {"mongo": "ok", "futureComponent": "ok"}}
+# -> {"status": "ok", "components": {"mongo": "ok"}}
 ```
 
 - List MongoDB collections (requires API key):

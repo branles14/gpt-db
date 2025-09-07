@@ -13,9 +13,8 @@ async def health() -> JSONResponse:
     mongo = await mongo_status()
     components = {
         "mongo": "ok" if mongo.get("status") == "ok" else mongo,
-        "futureComponent": "ok",
     }
-    overall_status = "ok" if all(value == "ok" for value in components.values()) else "error"
+    overall_status = "ok" if components["mongo"] == "ok" else "error"
     status_code = (
         status.HTTP_200_OK
         if overall_status == "ok"
