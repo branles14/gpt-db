@@ -15,3 +15,17 @@
 | Append log manually           | `POST /food/log`                    | Rare, but useful (custom serving overrides)                                |                                                             |        |       |
 | Delete specific log entry     | `DELETE /food/log/{log_id}`         | Clean reversible deletes                                                   |                                                             |        |       |
 | Undo last log entry           | `POST /food/log/undo`               | Deletes the most recent entry for the ape; ergonomic sugar                 |                                                             |        |       |
+
+## Notes
+
+### Catalog
+
+The catalog holds information about foods.
+
+### Stock
+
+The stock is foods that the user has on hand.
+
+### Log
+
+The log is for logging what the user has consummed for the purpose of kcal and macro tracking.
