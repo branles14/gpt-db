@@ -6,6 +6,7 @@ Experimental API to enhance ChatGPT's logging abilities. Built with FastAPI and 
 
 - `/`: Health check (no auth). Returns `{ "status": "ok" }` when the API is up.
 - `/list`: Lists MongoDB collections across accessible databases. Requires `x-api-key` header.
+  - Unauthorized requests receive a playful randomized error message.
 - `/food/catalog`:
   - `GET` – list products with optional filters (`q`, `upc`, `tag`).
   - `POST` – create or update a product by `upc`.
