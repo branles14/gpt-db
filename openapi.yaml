@@ -1,0 +1,247 @@
+openapi: 3.1.0
+info:
+  title: gpt-db API
+  version: 1.0.0
+servers:
+  - url: https://gpt-db.vercel.app
+    description: Production server
+paths:
+  /:
+    get:
+      summary: Root endpoint
+      operationId: getRoot
+      responses:
+        '200':
+          description: Successful response
+  /list:
+    get:
+      summary: List MongoDB collections
+      operationId: listCollections
+      responses:
+        '200':
+          description: Successful response
+  /health:
+    get:
+      summary: Service health check
+      operationId: getHealth
+      tags:
+        - health
+      responses:
+        '200':
+          description: Service healthy
+        '503':
+          description: Service unhealthy
+  /food/catalog:
+    get:
+      summary: List products
+      operationId: listProducts
+      tags:
+        - food
+      parameters:
+        - in: query
+          name: q
+          schema:
+            type: string
+          required: false
+        - in: query
+          name: upc
+          schema:
+            type: string
+          required: false
+        - in: query
+          name: tag
+          schema:
+            type: string
+          required: false
+      responses:
+        '200':
+          description: Successful response
+    post:
+      summary: Create or update a product
+      operationId: upsertProduct
+      tags:
+        - food
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '201':
+          description: Created
+  /food/catalog/{product_id}:
+    get:
+      summary: Retrieve product by ID
+      operationId: getProduct
+      tags:
+        - food
+      parameters:
+        - in: path
+          name: product_id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful response
+        '404':
+          description: Product not found
+    delete:
+      summary: Delete product
+      operationId: deleteProduct
+      tags:
+        - food
+      parameters:
+        - in: path
+          name: product_id
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: force
+          required: false
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Product deleted
+  /food/stock:
+    get:
+      summary: List stock
+      operationId: getFoodStock
+      tags:
+        - food
+      parameters:
+        - in: query
+          name: view
+          required: false
+          schema:
+            type: string
+            enum: [aggregate, items]
+      responses:
+        '200':
+          description: Successful response
+    post:
+      summary: Add stock units
+      operationId: addFoodStock
+      tags:
+        - food
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                type: object
+      responses:
+        '201':
+          description: Stock added
+  /food/stock/consume:
+    post:
+      summary: Consume stock and log nutrition
+      operationId: consumeFoodStock
+      tags:
+        - food
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Stock consumed
+  /food/stock/remove:
+    post:
+      summary: Remove stock without log
+      operationId: removeFoodStock
+      tags:
+        - food
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Stock removed
+  /food/stock/{stock_id}:
+    delete:
+      summary: Delete specific stock row
+      operationId: deleteStockRow
+      tags:
+        - food
+      parameters:
+        - in: path
+          name: stock_id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Stock row deleted
+  /food/log:
+    get:
+      summary: Retrieve log entries
+      operationId: getFoodLog
+      tags:
+        - food
+      parameters:
+        - in: query
+          name: date
+          required: false
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Successful response
+    post:
+      summary: Append log entry
+      operationId: appendFoodLog
+      tags:
+        - food
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '201':
+          description: Log entry created
+  /food/log/{log_id}:
+    delete:
+      summary: Delete log entry
+      operationId: deleteFoodLog
+      tags:
+        - food
+      parameters:
+        - in: path
+          name: log_id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Log entry deleted
+  /food/log/undo:
+    post:
+      summary: Undo most recent log entry
+      operationId: undoFoodLog
+      tags:
+        - food
+      responses:
+        '200':
+          description: Log entry undone
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: x-api-key
+security:
+  - ApiKeyAuth: []
