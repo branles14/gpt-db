@@ -101,7 +101,7 @@ python tests/ping-mongo.py
 - `app/`: Application package
   - `app/main.py`: Creates the FastAPI application and mounts routes
   - `app/api/routes.py`: Root route definitions and sub-router mounting
-  - `app/api/food.py`: `/food/stock` endpoints
+  - `app/api/food/`: Module containing `/food/stock` endpoints
   - `app/api/deps.py`: Shared dependencies (e.g., API key auth)
   - `app/api/utils.py`: Helper utilities (e.g., Mongo error formatting)
   - `app/db/mongo.py`: MongoDB client and helpers
