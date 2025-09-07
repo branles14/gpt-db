@@ -11,7 +11,17 @@ router = APIRouter()
 async def health() -> JSONResponse:
     """Report service health information."""
     mongo = await mongo_status()
+    components = {
+        "mongo": "ok" if mongo.get("status") == "ok" else mongo,
+        "futureComponent": "ok",
+    }
+    overall_status = "ok" if all(value == "ok" for value in components.values()) else "error"
     status_code = (
-        status.HTTP_200_OK if mongo.get("status") == "ok" else status.HTTP_503_SERVICE_UNAVAILABLE
+        status.HTTP_200_OK
+        if overall_status == "ok"
+        else status.HTTP_503_SERVICE_UNAVAILABLE
     )
-    return JSONResponse(status_code=status_code, content={"mongo": mongo})
+    return JSONResponse(
+        status_code=status_code,
+        content={"status": overall_status, "components": components},
+    )

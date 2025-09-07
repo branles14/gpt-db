@@ -5,7 +5,7 @@ Experimental API to enhance ChatGPT's logging abilities. Built with FastAPI and 
 ## Endpoints
 
 - `/`: Returns `{ "message": "🍌" }` when the API key is valid.
-- `/health`: Reports service status, including MongoDB connectivity. Requires `x-api-key` header.
+- `/health`: Reports overall service status and component checks (e.g. MongoDB). Requires `x-api-key` header.
 - `/list`: Lists MongoDB collections across accessible databases. Requires `x-api-key` header.
   - Unauthorized requests receive a playful randomized error message.
 - `/docs`, `/redoc`, `/openapi.json`: Interactive API docs. All require `x-api-key` header.
@@ -66,7 +66,7 @@ curl -sS \
 curl -sS \
   -H "x-api-key: ${API_KEY}" \
   http://localhost:${PORT:-8000}/health
-# -> {"mongo":{"status":"ok"}}
+# -> {"status": "ok", "components": {"mongo": "ok", "futureComponent": "ok"}}
 ```
 
 - List MongoDB collections (requires API key):
