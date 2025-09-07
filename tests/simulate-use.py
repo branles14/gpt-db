@@ -77,8 +77,15 @@ def cli(ctx: click.Context, api_url: str, api_key: Optional[str]) -> None:
 @cli.command()
 @click.pass_obj
 def root(client: APIClient) -> None:
-    """Call the unauthenticated root endpoint."""
+    """Call the root endpoint (requires API key)."""
     client.request("GET", "/")
+
+
+@cli.command()
+@click.pass_obj
+def health(client: APIClient) -> None:
+    """Check service health (requires API key)."""
+    client.request("GET", "/health")
 
 
 @cli.command("list")

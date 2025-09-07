@@ -4,9 +4,11 @@ Experimental API to enhance ChatGPT's logging abilities. Built with FastAPI and 
 
 ## Endpoints
 
-- `/`: Health check (no auth). Returns `{ "status": "ok" }` when the API is up.
+- `/`: Returns `{ "message": "🍌" }` when the API key is valid.
+- `/health`: Reports service status, including MongoDB connectivity. Requires `x-api-key` header.
 - `/list`: Lists MongoDB collections across accessible databases. Requires `x-api-key` header.
   - Unauthorized requests receive a playful randomized error message.
+- `/docs`, `/redoc`, `/openapi.json`: Interactive API docs. All require `x-api-key` header.
 - `/food/catalog`:
   - `GET` – list products with optional filters (`q`, `upc`, `tag`).
   - `POST` – create or update a product by `upc`.
@@ -49,11 +51,22 @@ uvicorn gpt_db.app:app --host 0.0.0.0 --port "${PORT:-8000}"
 
 ## Usage Examples (curl)
 
-- API health:
+- Root (requires API key):
 
 ```bash
-curl -sS http://localhost:${PORT:-8000}/
-# -> {"status":"ok"}
+curl -sS \
+  -H "x-api-key: ${API_KEY}" \
+  http://localhost:${PORT:-8000}/
+# -> {"message":"🍌"}
+```
+
+- Service health (requires API key):
+
+```bash
+curl -sS \
+  -H "x-api-key: ${API_KEY}" \
+  http://localhost:${PORT:-8000}/health
+# -> {"mongo":{"status":"ok"}}
 ```
 
 - List MongoDB collections (requires API key):
@@ -225,11 +238,15 @@ Set environment variables in Vercel Project Settings:
 After deploy, verify:
 
 ```bash
-# Health (no auth)
-curl -sS https://<project>.vercel.app/
-# -> {"status":"ok"}
+# Root
+curl -sS -H "x-api-key: ${API_KEY}" https://<project>.vercel.app/
+# -> {"message":"🍌"}
 
-# Collections (with auth)
+# Service health
+curl -sS -H "x-api-key: ${API_KEY}" https://<project>.vercel.app/health
+# -> {"mongo":{"status":"ok"}}
+
+# Collections
 curl -sS -H "x-api-key: ${API_KEY}" https://<project>.vercel.app/list
 ```
 
