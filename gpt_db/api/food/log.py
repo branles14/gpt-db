@@ -4,7 +4,7 @@ from typing import Any, Dict, List, Optional
 from bson import ObjectId, errors as bson_errors
 from fastapi import APIRouter, Depends, Query, status
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, root_validator
+from pydantic import BaseModel, model_validator
 
 from gpt_db.api.deps import require_api_key
 from gpt_db.api.utils import format_mongo_error
@@ -30,9 +30,9 @@ class LogEntry(BaseModel):
     units: int = 1
     timestamp: Optional[datetime] = None
 
-    @root_validator
-    def _check_identifier(cls, values: Dict[str, Any]) -> Dict[str, Any]:
-        if not values.get("product_id") and not values.get("upc"):
+    @model_validator(mode="after")
+    def _check_identifier(cls, values: "LogEntry") -> "LogEntry":
+        if not values.product_id and not values.upc:
             raise ValueError("Either product_id or upc must be provided")
         return values
 
