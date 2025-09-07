@@ -8,7 +8,8 @@ Experimental API to enhance ChatGPT's logging abilities. Built with FastAPI and 
 - `/health`: Reports overall service status and component checks (e.g. MongoDB). Requires `x-api-key` header.
 - `/list`: Lists MongoDB collections across accessible databases. Requires `x-api-key` header.
   - Unauthorized requests receive a playful randomized error message.
-- `/docs`, `/redoc`, `/openapi.json`: Interactive API docs. All require `x-api-key` header.
+- `/docs`, `/openapi.json`: Interactive API docs, no API key required.
+- `/redoc`: Interactive API docs. Requires `x-api-key` header.
 - `/food/catalog`:
   - `GET` – list products with optional filters (`q`, `upc`, `tag`).
   - `POST` – create or update a product by `upc`.
