@@ -16,6 +16,3 @@ async def mongo_status() -> dict[str, str]:
         return {"status": "ok"}
     except Exception as e:
         return {"status": "error", "detail": str(e)}
-    finally:
-        if client is not None:
-            client.close()
