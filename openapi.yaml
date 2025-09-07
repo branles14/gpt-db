@@ -132,9 +132,24 @@ paths:
         content:
           application/json:
             schema:
-              type: array
-              items:
-                type: object
+              type: object
+              required: [items]
+              properties:
+                items:
+                  type: array
+                  items:
+                    type: object
+                    required: [quantity]
+                    properties:
+                      product_id:
+                        type: string
+                        description: MongoDB ObjectId of the product
+                      upc:
+                        type: string
+                        description: Barcode for the product
+                      quantity:
+                        type: integer
+                        minimum: 1
       responses:
         '201':
           description: Stock added

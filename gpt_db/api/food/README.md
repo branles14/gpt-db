@@ -84,7 +84,7 @@ Add units for one or more products.
 curl -sS -X POST \
   -H "Content-Type: application/json" \
   -H "x-api-key: ${API_KEY}" \
-  -d '[{"upc":"0001","quantity":3}]' \
+  -d '{"items":[{"upc":"0001","quantity":3}]}' \
   https://<host>/food/stock
 ```
 

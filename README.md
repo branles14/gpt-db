@@ -118,7 +118,7 @@ curl -sS \
 curl -sS -X POST \
   -H "Content-Type: application/json" \
   -H "x-api-key: ${API_KEY}" \
-  -d '[{"upc": "0001", "quantity": 3}]' \
+  -d '{"items": [{"upc": "0001", "quantity": 3}]}' \
   http://localhost:${PORT:-8000}/food/stock
 # -> {"upserted_ids": ["..."]}
 ```
