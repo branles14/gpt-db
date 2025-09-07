@@ -1,5 +1,3 @@
-from typing import Any
-
 from fastapi import HTTPException, status
 from motor.motor_asyncio import AsyncIOMotorClient
 
@@ -19,4 +17,12 @@ def get_mongo_client() -> AsyncIOMotorClient:
             )
         _mongo_client = AsyncIOMotorClient(uri, appname="gpt-db")
     return _mongo_client
+
+
+def close_mongo_client() -> None:
+    """Close and reset the cached MongoDB client."""
+    global _mongo_client
+    if _mongo_client is not None:
+        _mongo_client.close()
+        _mongo_client = None
 
