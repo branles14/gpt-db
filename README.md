@@ -12,8 +12,11 @@ Experimental API to enhance ChatGPT's logging abilities. Built with FastAPI and 
   - `GET /food/catalog/{product_id}` – retrieve a product.
   - `DELETE /food/catalog/{product_id}` – delete a product (`force=true` to bypass reference checks).
 - `/food/stock`:
-  - `GET` – returns all documents in the `food.stock` collection.
-  - `POST` – inserts one or more JSON objects into `food.stock`.
+  - `GET` – list stock with `view=aggregate|items`.
+  - `POST` – add units via `{ upc|product_id, quantity }`.
+  - `POST /food/stock/consume` – atomic decrement with log.
+  - `POST /food/stock/remove` – decrement with a `reason` (no nutrition log).
+  - `DELETE /food/stock/{stock_id}` – remove a specific stock row.
 
 ## Setup & Local Run
 
@@ -61,8 +64,8 @@ curl -sS \
 ```bash
 curl -sS \
   -H "x-api-key: ${API_KEY}" \
-  http://localhost:${PORT:-8000}/food/stock
-# -> {"items": [...]}  # complete list of documents
+  "http://localhost:${PORT:-8000}/food/stock?view=aggregate"
+# -> {"items": [...]}  # aggregated quantities
 ```
 
 - Add to food stock (requires API key):
@@ -71,9 +74,31 @@ curl -sS \
 curl -sS -X POST \
   -H "Content-Type: application/json" \
   -H "x-api-key: ${API_KEY}" \
-  -d '[{"name": "apple", "qty": 3}]' \
+  -d '[{"upc": "0001", "quantity": 3}]' \
   http://localhost:${PORT:-8000}/food/stock
-# -> {"inserted_ids": ["..."]}
+# -> {"upserted_ids": ["..."]}
+```
+
+- Consume stock (with log):
+
+```bash
+curl -sS -X POST \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: ${API_KEY}" \
+  -d '{"upc": "0001", "units": 1}' \
+  http://localhost:${PORT:-8000}/food/stock/consume
+# -> {"remaining": 2}
+```
+
+- Remove stock (no log):
+
+```bash
+curl -sS -X POST \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: ${API_KEY}" \
+  -d '{"upc": "0001", "units": 1, "reason": "spoilage"}' \
+  http://localhost:${PORT:-8000}/food/stock/remove
+# -> {"remaining": 1}
 ```
 
 If MongoDB is unreachable or misconfigured, `/list` responds with `503` and a JSON error:
