@@ -1,7 +1,6 @@
-from fastapi import HTTPException, status
 from motor.motor_asyncio import AsyncIOMotorClient
 
-from gpt_db.core.env import get_mongo_uri
+from gpt_db.db.mongo import get_mongo_client
 
 
 async def mongo_status() -> dict[str, str]:
@@ -12,13 +11,7 @@ async def mongo_status() -> dict[str, str]:
     """
     client: AsyncIOMotorClient | None = None
     try:
-        uri = get_mongo_uri()
-        if not uri:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Server not configured: set MONGO_URI",
-            )
-        client = AsyncIOMotorClient(uri, appname="gpt-db")
+        client = get_mongo_client()
         await client.admin.command("ping")
         return {"status": "ok"}
     except Exception as e:
