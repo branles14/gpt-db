@@ -4,28 +4,62 @@ from typing import Any, Dict, List, Optional
 from bson import ObjectId, errors as bson_errors
 from fastapi import APIRouter, Depends, Query, status, HTTPException
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, model_validator
+from pydantic import BaseModel, model_validator, Field, field_validator
+from pydantic.config import ConfigDict
 from pymongo import ReturnDocument
 
 from gpt_db.api.deps import require_api_key
 from gpt_db.api.utils import format_mongo_error
 from gpt_db.db.mongo import get_mongo_client
+from gpt_db.api.food.catalog import NutritionFacts
 
 router = APIRouter(prefix="/food", tags=["food"])
 
 
 class StockItem(BaseModel):
-    """Payload for adding stock units."""
+    """Payload for adding stock units with optional metadata to sync to catalog."""
+
+    model_config = ConfigDict(extra="allow")
 
     product_id: Optional[str] = None
     upc: Optional[str] = None
     quantity: int
+    # Optional enrichment fields that may also update catalog
+    name: Optional[str] = None
+    tags: Optional[List[str]] = Field(default=None, min_length=1)
+    ingredients: Optional[List[str]] = Field(default=None, min_length=1)
+    nutrition: Optional[NutritionFacts] = None
 
     @model_validator(mode="after")
     def _check_identifier(cls, values: "StockItem") -> "StockItem":
         if not values.product_id and not values.upc:
             raise ValueError("Either product_id or upc must be provided")
         return values
+
+    @field_validator("tags", "ingredients", mode="before")
+    @classmethod
+    def _normalize_string_list(cls, v: Any) -> Optional[List[str]]:
+        if v is None:
+            return None
+        if isinstance(v, str):
+            v = [v]
+        if not isinstance(v, list):
+            try:
+                v = list(v)  # type: ignore[arg-type]
+            except Exception:
+                raise TypeError("Expected a string or list of strings")
+        seen: set[str] = set()
+        result: List[str] = []
+        for item in v:
+            s = str(item).strip()
+            if not s:
+                continue
+            k = s.lower()
+            if k in seen:
+                continue
+            seen.add(k)
+            result.append(s)
+        return result or None
 
 
 class AddStockRequest(BaseModel):
@@ -107,17 +141,117 @@ async def add_food_stock(payload: AddStockRequest) -> JSONResponse:
     """Add stock units for one or more products."""
     try:
         client = get_mongo_client()
-        collection = client.get_database("food").get_collection("stock")
+        db = client.get_database("food")
+        collection = db.get_collection("stock")
+        catalog = db.get_collection("catalog")
         upserted_ids: List[str] = []
         for item in payload.items:
             filter: Dict[str, Any]
+            set_fields: Dict[str, Any] = {}
+            product_doc: Optional[Dict[str, Any]] = None
+
             if item.product_id:
-                filter = {"product_id": ObjectId(item.product_id)}
+                obj_id = ObjectId(item.product_id)
+                filter = {"product_id": obj_id}
+                # Enrich from catalog if available
+                product_doc = await catalog.find_one({"_id": obj_id})
             else:
+                # Using only UPC; try to inherit fields from catalog
                 filter = {"upc": item.upc}
+                product_doc = await catalog.find_one({"upc": item.upc})
+
+            # Sync provided metadata into catalog based on UPC
+            if item.upc:
+                item_data = item.model_dump(exclude_none=True)
+
+                # Build incoming nutrition (prefer nested; merge any top-level macros provided as extras)
+                incoming_nutrition: Dict[str, Any] | None = None
+                if "nutrition" in item_data:
+                    # Pydantic model dumps to dict already
+                    incoming_nutrition = dict(item_data["nutrition"])  # type: ignore[arg-type]
+                macro_keys = ("calories", "protein", "fat", "carbs", "fiber", "sugars")
+                macro_payload = {
+                    k: item_data[k]
+                    for k in macro_keys
+                    if k in item_data and item_data[k] is not None
+                }
+                if macro_payload:
+                    incoming_nutrition = {**(incoming_nutrition or {}), **macro_payload}
+
+                if product_doc:
+                    # Prepare $set updates only when values change or extend existing arrays
+                    catalog_set: Dict[str, Any] = {}
+                    if "name" in item_data and item_data["name"] and item_data["name"] != product_doc.get("name"):
+                        catalog_set["name"] = item_data["name"]
+
+                    def union(existing: Optional[List[str]], new_list: Optional[List[str]]) -> Optional[List[str]]:
+                        if new_list is None:
+                            return None
+                        existing_list = [str(x) for x in (existing or [])]
+                        merged: List[str] = []
+                        seen: set[str] = set()
+                        for s in existing_list + [str(x) for x in new_list]:
+                            t = s.strip()
+                            key = t.lower()
+                            if not t or key in seen:
+                                continue
+                            seen.add(key)
+                            merged.append(t)
+                        if merged != existing_list:
+                            return merged
+                        return None
+
+                    tags_union = union(product_doc.get("tags"), item_data.get("tags"))
+                    if tags_union is not None:
+                        catalog_set["tags"] = tags_union
+                    ingredients_union = union(product_doc.get("ingredients"), item_data.get("ingredients"))
+                    if ingredients_union is not None:
+                        catalog_set["ingredients"] = ingredients_union
+
+                    if incoming_nutrition:
+                        existing_nutrition = product_doc.get("nutrition") or {}
+                        merged_nutrition = {**existing_nutrition, **incoming_nutrition}
+                        if merged_nutrition != existing_nutrition:
+                            catalog_set["nutrition"] = merged_nutrition
+
+                    if catalog_set:
+                        await catalog.update_one({"_id": product_doc["_id"]}, {"$set": catalog_set})
+                        product_doc = await catalog.find_one({"_id": product_doc["_id"]})
+                else:
+                    # Create a new catalog item using whatever details were provided
+                    new_doc: Dict[str, Any] = {"upc": item.upc}
+                    for key in ("name", "tags", "ingredients"):
+                        if key in item_data:
+                            new_doc[key] = item_data[key]
+                    if incoming_nutrition:
+                        new_doc["nutrition"] = incoming_nutrition
+                    # Even if only UPC is provided, seed the catalog for fast future adds
+                    await catalog.update_one({"upc": item.upc}, {"$set": new_doc}, upsert=True)
+                    product_doc = await catalog.find_one({"upc": item.upc})
+
+            if product_doc:
+                # Build a snapshot of product fields to store on stock
+                set_fields["product_id"] = product_doc.get("_id")
+                # Primitive fields
+                for key in ("upc", "name", "tags", "ingredients"):
+                    if key in product_doc:
+                        set_fields[key] = product_doc[key]
+                # Nutrition: prefer nested object, else synthesize from top-level macros
+                nutrition = product_doc.get("nutrition") or {}
+                if not nutrition:
+                    for k in ("calories", "protein", "fat", "carbs", "fiber", "sugars"):
+                        if k in product_doc and product_doc[k] is not None:
+                            nutrition[k] = product_doc[k]
+                if nutrition:
+                    set_fields["nutrition"] = nutrition
+
+            update_doc: Dict[str, Any] = {"$inc": {"quantity": item.quantity}}
+            if set_fields:
+                update_doc["$set"] = set_fields
+
             result = await collection.update_one(
                 filter,
-                {"$inc": {"quantity": item.quantity}},
+                update_doc,
                 upsert=True,
             )
             if result.upserted_id:

@@ -138,6 +138,28 @@ curl -sS -X POST \
   -d '{"items": [{"upc": "0001", "quantity": 3}]}' \
   http://localhost:${PORT:-8000}/food/stock
 # -> {"upserted_ids": ["..."]}
+
+- Add to stock and sync catalog details:
+
+```bash
+curl -sS -X POST \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: ${API_KEY}" \
+  -d '{"items": [{
+        "upc": "0002",
+        "quantity": 2,
+        "name": "Banana",
+        "tags": ["fruit"],
+        "ingredients": ["banana"],
+        "nutrition": {"calories": 105, "protein": 1.3, "carbs": 27}
+      }]}' \
+  http://localhost:${PORT:-8000}/food/stock
+```
+
+Rules:
+- If the UPC is not in catalog, a new catalog item is created with provided details.
+- If the UPC exists, new values (e.g., tags, ingredients, nutrition) are merged into the catalog item.
+- Stock documents copy a snapshot of catalog fields (name, tags, ingredients, nutrition) but have their own `_id`.
 ```
 
 - Consume stock (with log):

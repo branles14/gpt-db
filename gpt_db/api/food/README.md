@@ -80,7 +80,10 @@ curl -sS -H "x-api-key: ${API_KEY}" \
 ```
 
 ### `POST /food/stock`
-Add units for one or more products.
+Add units for one or more products. When adding by `upc`, you can include
+optional fields to seed or update the catalog entry: `name`, `tags`,
+`ingredients`, and `nutrition` (or top-level macros like `calories`,
+`protein`, `fat`, `carbs`).
 
 ```bash
 curl -sS -X POST \
@@ -194,3 +197,17 @@ curl -sS -X POST -H "x-api-key: ${API_KEY}" \
 ```json
 { "deleted_id": "64abc..." }
 ```
+Add and sync details into catalog:
+
+```bash
+curl -sS -X POST \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: ${API_KEY}" \
+  -d '{"items":[{"upc":"0002","quantity":2,"name":"Banana","tags":["fruit"],"ingredients":["banana"],"nutrition":{"calories":105,"protein":1.3}}]}' \
+  https://<host>/food/stock
+```
+
+Behavior:
+- If UPC not found in catalog, a new catalog item is created with provided details.
+- If UPC exists, new values are merged (lists are unioned; nutrition fields are merged).
+- Stock documents store a snapshot of catalog fields but have their own `_id`.
