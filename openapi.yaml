@@ -459,6 +459,20 @@ paths:
           application/json:
             schema:
               type: object
+              properties:
+                calories:
+                  type: number
+                  description: Target calories
+                protein:
+                  type: number
+                  description: Target protein grams
+                fat:
+                  type: number
+                  description: Target fat grams
+                carbs:
+                  type: number
+                  description: Target carbohydrate grams
+              additionalProperties: false
       responses:
         '200':
           description: Targets updated
