@@ -30,8 +30,13 @@ A unified [OpenAPI 3.1 specification](openapi.yaml) consolidates all routes unde
   - `POST` – append a log entry manually.
   - `DELETE /food/log/{log_id}` – soft delete a log entry.
   - `POST /food/log/undo` – undo the most recent entry.
+- `/food/targets`:
+  - `GET` – current macro targets (defaults to FDA Daily Values).
+  - `PATCH` – update one or more targets.
+  - `DELETE` – reset all targets to defaults.
+  - `DELETE /food/targets/{macro}` – reset a single macro to its default.
 
-Full request/response examples for `/food/catalog`, `/food/stock`, and `/food/log` are available in [gpt_db/api/food/README.md](gpt_db/api/food/README.md).
+Full request/response examples for `/food/catalog`, `/food/stock`, `/food/log`, and `/food/targets` are available in [gpt_db/api/food/README.md](gpt_db/api/food/README.md).
 
 ## Setup & Local Run
 

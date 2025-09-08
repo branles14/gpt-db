@@ -14,13 +14,23 @@ from gpt_db.db.mongo import get_mongo_client
 router = APIRouter(prefix="/food", tags=["food"])
 
 
-DAILY_TARGETS: Dict[str, float] = {
+DV_DEFAULTS: Dict[str, float] = {
     "calories": 2000,
     "protein": 50,
     "fat": 78,
     "carbs": 275,
 }  # FDA Daily Values for adults and children ≥4 yrs
 # Source: https://www.fda.gov/food/new-nutrition-facts-label/daily-value-new-nutrition-and-supplement-facts-labels
+
+
+async def _get_targets(db) -> Dict[str, float]:
+    """Fetch current macro targets, falling back to DV defaults."""
+    col = db.get_collection("targets")
+    doc = await col.find_one({"_id": "current"})
+    if doc:
+        doc.pop("_id", None)
+        return {**DV_DEFAULTS, **doc}
+    return dict(DV_DEFAULTS)
 
 
 class LogEntry(BaseModel):
@@ -50,6 +60,81 @@ def _serialize(doc: Dict[str, Any]) -> Dict[str, Any]:
     return result
 
 
+@router.get("/targets", dependencies=[Depends(require_api_key)])
+async def get_targets() -> JSONResponse:
+    """Return current macro targets."""
+    try:
+        client = get_mongo_client()
+        db = client.get_database("food")
+        targets = await _get_targets(db)
+        return JSONResponse(content={"targets": targets})
+    except Exception as e:
+        content = format_mongo_error(e)
+        return JSONResponse(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE, content=content
+        )
+
+
+@router.patch("/targets", dependencies=[Depends(require_api_key)])
+async def patch_targets(updates: Dict[str, float]) -> JSONResponse:
+    """Partially update macro targets."""
+    invalid = [k for k in updates if k not in DV_DEFAULTS]
+    if invalid:
+        return JSONResponse(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            content={"error": f"Invalid macro: {invalid[0]}"},
+        )
+    try:
+        client = get_mongo_client()
+        db = client.get_database("food")
+        col = db.get_collection("targets")
+        await col.update_one({"_id": "current"}, {"$set": updates}, upsert=True)
+        targets = await _get_targets(db)
+        return JSONResponse(content={"targets": targets})
+    except Exception as e:
+        content = format_mongo_error(e)
+        return JSONResponse(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE, content=content
+        )
+
+
+@router.delete("/targets", dependencies=[Depends(require_api_key)])
+async def delete_targets() -> JSONResponse:
+    """Reset all targets to defaults."""
+    try:
+        client = get_mongo_client()
+        db = client.get_database("food")
+        col = db.get_collection("targets")
+        await col.delete_many({})
+        return JSONResponse(content={"targets": dict(DV_DEFAULTS)})
+    except Exception as e:
+        content = format_mongo_error(e)
+        return JSONResponse(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE, content=content
+        )
+
+
+@router.delete("/targets/{macro}", dependencies=[Depends(require_api_key)])
+async def delete_target_macro(macro: str) -> JSONResponse:
+    """Reset a single macro to its default."""
+    if macro not in DV_DEFAULTS:
+        return JSONResponse(
+            status_code=status.HTTP_404_NOT_FOUND,
+            content={"error": "Unknown macro"},
+        )
+    try:
+        client = get_mongo_client()
+        db = client.get_database("food")
+        col = db.get_collection("targets")
+        await col.update_one({"_id": "current"}, {"$unset": {macro: ""}})
+        targets = await _get_targets(db)
+        return JSONResponse(content={"targets": targets})
+    except Exception as e:
+        content = format_mongo_error(e)
+        return JSONResponse(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE, content=content
+        )
+
 @router.get("/log", dependencies=[Depends(require_api_key)])
 async def get_log(date: Optional[str] = Query(default=None)) -> JSONResponse:
     """Return log entries for the given date (UTC)."""
@@ -63,13 +148,14 @@ async def get_log(date: Optional[str] = Query(default=None)) -> JSONResponse:
         db = client.get_database("food")
         log_col = db.get_collection("log")
         catalog_col = db.get_collection("catalog")
+        targets = await _get_targets(db)
         cursor = (
             log_col.find({"timestamp": {"$gte": start, "$lt": end}})
             .sort("timestamp")
         )
         docs = [doc async for doc in cursor]
         entries: List[Dict[str, Any]] = []
-        totals = {k: 0.0 for k in DAILY_TARGETS}
+        totals = {k: 0.0 for k in targets}
         for doc in docs:
             product = None
             if doc.get("product_id"):
@@ -100,7 +186,7 @@ async def get_log(date: Optional[str] = Query(default=None)) -> JSONResponse:
             totals["fat"] += fat
             totals["carbs"] += carbs
             entries.append(_serialize(doc))
-        remaining = {k: max(DAILY_TARGETS[k] - totals[k], 0) for k in DAILY_TARGETS}
+        remaining = {k: max(targets[k] - totals[k], 0) for k in targets}
         return JSONResponse(
             content={"entries": entries, "totals": totals, "remaining": remaining}
         )
