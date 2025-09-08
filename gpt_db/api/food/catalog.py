@@ -1,8 +1,10 @@
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, Query, status
 from fastapi.responses import JSONResponse
 from bson import ObjectId, errors as bson_errors
+from pydantic import BaseModel
+from pydantic.config import ConfigDict
 
 from gpt_db.api.deps import require_api_key
 from gpt_db.api.utils import format_mongo_error
@@ -17,6 +19,16 @@ def _serialize(doc: Dict[str, Any]) -> Dict[str, Any]:
     if "_id" in result:
         result["_id"] = str(result["_id"])
     return result
+
+
+class Product(BaseModel):
+    """Product payload for catalog upsert."""
+
+    model_config = ConfigDict(extra="allow")
+
+    name: str
+    upc: Optional[str] = None
+    tags: Optional[List[str]] = None
 
 
 @router.get("/catalog", dependencies=[Depends(require_api_key)])
@@ -47,18 +59,19 @@ async def list_products(
 
 
 @router.post("/catalog", dependencies=[Depends(require_api_key)])
-async def upsert_product(product: Dict[str, Any]) -> JSONResponse:
+async def upsert_product(product: Product) -> JSONResponse:
     """Create or update a product by UPC."""
     try:
         client = get_mongo_client()
         collection = client.get_database("food").get_collection("catalog")
-        if "upc" in product:
+        payload = product.model_dump(exclude_none=True)
+        if "upc" in payload:
             await collection.update_one(
-                {"upc": product["upc"]}, {"$set": product}, upsert=True
+                {"upc": payload["upc"]}, {"$set": payload}, upsert=True
             )
-            doc = await collection.find_one({"upc": product["upc"]})
+            doc = await collection.find_one({"upc": payload["upc"]})
         else:
-            result = await collection.insert_one(product)
+            result = await collection.insert_one(payload)
             doc = await collection.find_one({"_id": result.inserted_id})
         return JSONResponse(
             status_code=status.HTTP_201_CREATED, content={"item": _serialize(doc)}

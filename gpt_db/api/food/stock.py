@@ -28,6 +28,12 @@ class StockItem(BaseModel):
         return values
 
 
+class AddStockRequest(BaseModel):
+    """Request wrapper for adding stock units."""
+
+    items: List[StockItem]
+
+
 class ConsumeItem(BaseModel):
     """Payload for consuming or removing stock."""
 
@@ -93,13 +99,13 @@ async def get_food_stock(
 
 
 @router.post("/stock", dependencies=[Depends(require_api_key)])
-async def add_food_stock(items: List[StockItem]) -> JSONResponse:
+async def add_food_stock(payload: AddStockRequest) -> JSONResponse:
     """Add stock units for one or more products."""
     try:
         client = get_mongo_client()
         collection = client.get_database("food").get_collection("stock")
         upserted_ids: List[str] = []
-        for item in items:
+        for item in payload.items:
             filter: Dict[str, Any]
             if item.product_id:
                 filter = {"product_id": ObjectId(item.product_id)}

@@ -159,7 +159,7 @@ def stock_get(client: APIClient, view: str) -> None:
 @click.argument("payload", callback=_parse_json)
 @click.pass_obj
 def stock_add(client: APIClient, payload: Any) -> None:
-    """Add stock units from a JSON list."""
+    """Add stock units from a JSON object: {"items": [...]}"""
     client.request("POST", "/food/stock", json_data=payload)
 
 
