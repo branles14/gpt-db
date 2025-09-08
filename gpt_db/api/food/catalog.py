@@ -3,7 +3,7 @@ from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, Depends, Query, status
 from fastapi.responses import JSONResponse
 from bson import ObjectId, errors as bson_errors
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 from pydantic.config import ConfigDict
 
 from gpt_db.api.deps import require_api_key
@@ -21,6 +21,55 @@ def _serialize(doc: Dict[str, Any]) -> Dict[str, Any]:
     return result
 
 
+class NutritionFacts(BaseModel):
+    """Expanded per-unit nutrition facts.
+
+    Units: macros in grams, energy in kcal, most micronutrients in mg or mcg.
+    """
+
+    model_config = ConfigDict(extra="allow")
+
+    # Energy
+    calories: Optional[float] = Field(default=None, ge=0)
+
+    # Macros (g)
+    protein: Optional[float] = Field(default=None, ge=0)
+    fat: Optional[float] = Field(default=None, ge=0)
+    carbs: Optional[float] = Field(default=None, ge=0)
+    fiber: Optional[float] = Field(default=None, ge=0)
+    sugars: Optional[float] = Field(default=None, ge=0)
+    saturated_fat: Optional[float] = Field(default=None, ge=0)
+    trans_fat: Optional[float] = Field(default=None, ge=0)
+
+    # Cholesterol and electrolytes
+    cholesterol_mg: Optional[float] = Field(default=None, ge=0)
+    sodium_mg: Optional[float] = Field(default=None, ge=0)
+    potassium_mg: Optional[float] = Field(default=None, ge=0)
+
+    # Minerals (mg unless mcg specified)
+    calcium_mg: Optional[float] = Field(default=None, ge=0)
+    iron_mg: Optional[float] = Field(default=None, ge=0)
+    magnesium_mg: Optional[float] = Field(default=None, ge=0)
+    phosphorus_mg: Optional[float] = Field(default=None, ge=0)
+    zinc_mg: Optional[float] = Field(default=None, ge=0)
+    selenium_mcg: Optional[float] = Field(default=None, ge=0)
+    copper_mg: Optional[float] = Field(default=None, ge=0)
+    manganese_mg: Optional[float] = Field(default=None, ge=0)
+
+    # Vitamins (common forms)
+    vitamin_a_mcg: Optional[float] = Field(default=None, ge=0)
+    vitamin_c_mg: Optional[float] = Field(default=None, ge=0)
+    vitamin_d_mcg: Optional[float] = Field(default=None, ge=0)
+    vitamin_e_mg: Optional[float] = Field(default=None, ge=0)
+    vitamin_k_mcg: Optional[float] = Field(default=None, ge=0)
+    thiamin_mg: Optional[float] = Field(default=None, ge=0)  # B1
+    riboflavin_mg: Optional[float] = Field(default=None, ge=0)  # B2
+    niacin_mg: Optional[float] = Field(default=None, ge=0)  # B3
+    vitamin_b6_mg: Optional[float] = Field(default=None, ge=0)
+    folate_mcg: Optional[float] = Field(default=None, ge=0)
+    vitamin_b12_mcg: Optional[float] = Field(default=None, ge=0)
+
+
 class Product(BaseModel):
     """Product payload for catalog upsert."""
 
@@ -29,11 +78,40 @@ class Product(BaseModel):
     name: str
     upc: Optional[str] = None
     tags: Optional[List[str]] = None
-    # Optional nutrition facts per unit
+
+    # Nested nutrition object (preferred)
+    nutrition: Optional[NutritionFacts] = None
+
+    # Deprecated: accept top-level macros for backward compatibility
     calories: Optional[float] = Field(default=None, ge=0)
     protein: Optional[float] = Field(default=None, ge=0)
     fat: Optional[float] = Field(default=None, ge=0)
     carbs: Optional[float] = Field(default=None, ge=0)
+
+    @model_validator(mode="after")
+    def _merge_top_level_macros(self) -> "Product":
+        """Move any provided top-level macros into the nutrition object."""
+        # If nothing provided, skip
+        provided = {
+            k: v
+            for k, v in {
+                "calories": self.calories,
+                "protein": self.protein,
+                "fat": self.fat,
+                "carbs": self.carbs,
+            }.items()
+            if v is not None
+        }
+        if provided:
+            base = self.nutrition.model_dump(exclude_none=True) if self.nutrition else {}
+            base.update(provided)
+            self.nutrition = NutritionFacts(**base)
+            # Clear deprecated top-level fields to avoid storing duplicates
+            self.calories = None
+            self.protein = None
+            self.fat = None
+            self.carbs = None
+        return self
 
 
 @router.get("/catalog", dependencies=[Depends(require_api_key)])
@@ -69,6 +147,7 @@ async def upsert_product(product: Product) -> JSONResponse:
     try:
         client = get_mongo_client()
         collection = client.get_database("food").get_collection("catalog")
+        # Dump with deprecated top-level macros removed (merged into nutrition)
         payload = product.model_dump(exclude_none=True)
         if "upc" in payload:
             await collection.update_one(

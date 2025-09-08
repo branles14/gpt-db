@@ -76,10 +76,24 @@ async def get_log(date: Optional[str] = Query(default=None)) -> JSONResponse:
             elif doc.get("upc"):
                 product = await catalog_col.find_one({"upc": doc["upc"]})
             units = doc.get("units", 1)
-            calories = (product.get("calories", 0) if product else 0) * units
-            protein = (product.get("protein", 0) if product else 0) * units
-            fat = (product.get("fat", 0) if product else 0) * units
-            carbs = (product.get("carbs", 0) if product else 0) * units
+            # Support nested nutrition object, fallback to legacy top-level fields
+            nutrition = (product.get("nutrition") if product else None) or {}
+            calories = (
+                (nutrition.get("calories") or (product.get("calories") if product else 0) or 0)
+                * units
+            )
+            protein = (
+                (nutrition.get("protein") or (product.get("protein") if product else 0) or 0)
+                * units
+            )
+            fat = (
+                (nutrition.get("fat") or (product.get("fat") if product else 0) or 0)
+                * units
+            )
+            carbs = (
+                (nutrition.get("carbs") or (product.get("carbs") if product else 0) or 0)
+                * units
+            )
             totals["calories"] += calories
             totals["protein"] += protein
             totals["fat"] += fat
@@ -182,4 +196,3 @@ async def undo_log() -> JSONResponse:
         return JSONResponse(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE, content=content
         )
-

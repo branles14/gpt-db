@@ -23,19 +23,19 @@ curl -sS -H "x-api-key: ${API_KEY}" \
 ### `POST /food/catalog`
 Create or update a product by `upc`.
 
-Optional nutrition facts per unit: `calories`, `protein`, `fat`, `carbs`.
+Provide per-unit nutrition facts in a nested `nutrition` object. Supported fields include macros (e.g., `calories`, `protein`, `fat`, `carbs`, `fiber`, `sugars`), vitamins (e.g., `vitamin_c_mg`, `vitamin_d_mcg`), and minerals (e.g., `sodium_mg`, `potassium_mg`, `calcium_mg`). For backward compatibility, top-level macro fields may be provided and will be merged into `nutrition`.
 
 ```bash
 curl -sS -X POST \
   -H "Content-Type: application/json" \
   -H "x-api-key: ${API_KEY}" \
-  -d '{"upc":"0001","name":"Apple","calories":95,"protein":0.5,"fat":0.3,"carbs":25}' \
+  -d '{"upc":"0001","name":"Apple","nutrition":{"calories":95,"protein":0.5,"fat":0.3,"carbs":25,"fiber":4.4}}' \
   https://<host>/food/catalog
 ```
 
 ```json
 {
-  "item": { "_id": "64abc...", "upc": "0001", "name": "Apple", "calories": 95, "protein": 0.5, "fat": 0.3, "carbs": 25 }
+  "item": { "_id": "64abc...", "upc": "0001", "name": "Apple", "nutrition": { "calories": 95, "protein": 0.5, "fat": 0.3, "carbs": 25, "fiber": 4.4 } }
 }
 ```
 
