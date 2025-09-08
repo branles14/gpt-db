@@ -4,7 +4,8 @@ from typing import Any, Dict, List, Optional
 from bson import ObjectId, errors as bson_errors
 from fastapi import APIRouter, Depends, Query, status, HTTPException
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, model_validator
+from pydantic import BaseModel, Field, model_validator
+from pydantic.config import ConfigDict
 
 from gpt_db.api.deps import require_api_key
 from gpt_db.api.utils import format_mongo_error
@@ -48,6 +49,17 @@ class LogEntry(BaseModel):
         return values
 
 
+class TargetsUpdate(BaseModel):
+    """Payload for partially updating macro targets."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    calories: Optional[float] = Field(default=None, ge=0)
+    protein: Optional[float] = Field(default=None, ge=0)
+    fat: Optional[float] = Field(default=None, ge=0)
+    carbs: Optional[float] = Field(default=None, ge=0)
+
+
 def _serialize(doc: Dict[str, Any]) -> Dict[str, Any]:
     """Convert Mongo document to JSON-serializable dict."""
     result = dict(doc)
@@ -76,19 +88,19 @@ async def get_targets() -> JSONResponse:
 
 
 @router.patch("/targets", dependencies=[Depends(require_api_key)])
-async def patch_targets(updates: Dict[str, float]) -> JSONResponse:
+async def patch_targets(updates: TargetsUpdate) -> JSONResponse:
     """Partially update macro targets."""
-    invalid = [k for k in updates if k not in DV_DEFAULTS]
-    if invalid:
+    data = updates.model_dump(exclude_none=True)
+    if not data:
         return JSONResponse(
             status_code=status.HTTP_400_BAD_REQUEST,
-            content={"error": f"Invalid macro: {invalid[0]}"},
+            content={"error": "No valid fields provided"},
         )
     try:
         client = get_mongo_client()
         db = client.get_database("food")
         col = db.get_collection("targets")
-        await col.update_one({"_id": "current"}, {"$set": updates}, upsert=True)
+        await col.update_one({"_id": "current"}, {"$set": data}, upsert=True)
         targets = await _get_targets(db)
         return JSONResponse(content={"targets": targets})
     except Exception as e:

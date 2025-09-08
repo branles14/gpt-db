@@ -446,15 +446,19 @@ paths:
               properties:
                 calories:
                   type: number
+                  minimum: 0
                   description: Target calories
                 protein:
                   type: number
+                  minimum: 0
                   description: Target protein grams
                 fat:
                   type: number
+                  minimum: 0
                   description: Target fat grams
                 carbs:
                   type: number
+                  minimum: 0
                   description: Target carbohydrate grams
               additionalProperties: false
       responses:
