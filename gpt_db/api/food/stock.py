@@ -5,7 +5,7 @@ from typing import Any, Dict, List, Optional
 from bson import ObjectId, errors as bson_errors
 from fastapi import APIRouter, Depends, Query, status, HTTPException
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, model_validator, Field, field_validator
+from pydantic import BaseModel, Field, field_validator
 from pydantic.config import ConfigDict
 from pymongo import ReturnDocument
 
@@ -18,24 +18,20 @@ router = APIRouter(prefix="/food", tags=["food"])
 
 
 class StockItem(BaseModel):
-    """Payload for adding stock units with optional metadata to sync to catalog."""
+    """Payload for adding stock units with optional metadata to sync to catalog.
+
+    Adding to stock requires a UPC. product_id is not accepted here.
+    """
 
     model_config = ConfigDict(extra="allow")
 
-    product_id: Optional[str] = None
-    upc: Optional[str] = None
+    upc: str = Field(min_length=1)
     quantity: int
     # Optional enrichment fields that may also update catalog
     name: Optional[str] = None
     tags: Optional[List[str]] = Field(default=None, min_length=1)
     ingredients: Optional[List[str]] = Field(default=None, min_length=1)
     nutrition: Optional[NutritionFacts] = None
-
-    @model_validator(mode="after")
-    def _check_identifier(cls, values: "StockItem") -> "StockItem":
-        if not values.product_id and not values.upc:
-            raise ValueError("Either product_id or upc must be provided")
-        return values
 
     @field_validator("tags", "ingredients", mode="before")
     @classmethod
@@ -70,18 +66,11 @@ class AddStockRequest(BaseModel):
 
 
 class ConsumeItem(BaseModel):
-    """Payload for consuming or removing stock."""
+    """Payload for consuming or removing stock (UPC-only)."""
 
-    product_id: Optional[str] = None
-    upc: Optional[str] = None
+    upc: str = Field(min_length=1)
     units: int = 1
     reason: Optional[str] = None
-
-    @model_validator(mode="after")
-    def _check_identifier(cls, values: "ConsumeItem") -> "ConsumeItem":
-        if not values.product_id and not values.upc:
-            raise ValueError("Either product_id or upc must be provided")
-        return values
 
 
 def _serialize(doc: Dict[str, Any]) -> Dict[str, Any]:
@@ -167,15 +156,9 @@ async def add_food_stock(payload: AddStockRequest) -> JSONResponse:
             set_fields: Dict[str, Any] = {}
             product_doc: Optional[Dict[str, Any]] = None
 
-            if item.product_id:
-                obj_id = ObjectId(item.product_id)
-                filter = {"product_id": obj_id}
-                # Enrich from catalog if available
-                product_doc = await catalog.find_one({"_id": obj_id})
-            else:
-                # Using only UPC; try to inherit fields from catalog
-                filter = {"upc": item.upc}
-                product_doc = await catalog.find_one({"upc": item.upc})
+            # Using UPC; try to inherit fields from catalog
+            filter = {"upc": item.upc}
+            product_doc = await catalog.find_one({"upc": item.upc})
 
             # Sync provided metadata into catalog based on UPC
             if item.upc:
@@ -286,11 +269,6 @@ async def add_food_stock(payload: AddStockRequest) -> JSONResponse:
             status_code=status.HTTP_201_CREATED,
             content={"upserted_uuids": upserted_uuids},
         )
-    except bson_errors.InvalidId:
-        return JSONResponse(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            content={"error": "Invalid product_id"},
-        )
     except HTTPException:
         raise
     except Exception as e:
@@ -313,11 +291,7 @@ async def consume_stock(item: ConsumeItem) -> JSONResponse:
         log_col = db.get_collection("log")
         async with await client.start_session() as session:
             async with session.start_transaction():
-                filter: Dict[str, Any]
-                if item.product_id:
-                    filter = {"product_id": ObjectId(item.product_id)}
-                else:
-                    filter = {"upc": item.upc}
+                filter: Dict[str, Any] = {"upc": item.upc}
                 filter["quantity"] = {"$gte": item.units}
                 doc = await stock_col.find_one_and_update(
                     filter,
@@ -370,11 +344,7 @@ async def remove_stock(item: ConsumeItem) -> JSONResponse:
         removal_col = db.get_collection("stock_removals")
         async with await client.start_session() as session:
             async with session.start_transaction():
-                filter: Dict[str, Any]
-                if item.product_id:
-                    filter = {"product_id": ObjectId(item.product_id)}
-                else:
-                    filter = {"upc": item.upc}
+                filter: Dict[str, Any] = {"upc": item.upc}
                 filter["quantity"] = {"$gte": item.units}
                 doc = await stock_col.find_one_and_update(
                     filter,

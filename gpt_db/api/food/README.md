@@ -98,7 +98,7 @@ curl -sS -X POST \
 ```
 
 ### `POST /food/stock/consume`
-Atomically decrement stock and log nutrition.
+Atomically decrement stock and log nutrition (UPC-only).
 
 ```bash
 curl -sS -X POST \
@@ -113,7 +113,7 @@ curl -sS -X POST \
 ```
 
 ### `POST /food/stock/remove`
-Decrement without logging (requires `reason`).
+Decrement without logging (UPC-only; requires `reason`).
 
 ```bash
 curl -sS -X POST \

@@ -281,17 +281,30 @@ paths:
                   type: array
                   items:
                     type: object
-                    required: [quantity]
+                    required: [upc, quantity]
                     properties:
-                      product_id:
-                        type: string
-                        description: MongoDB ObjectId of the product
                       upc:
                         type: string
                         description: Barcode for the product
                       quantity:
                         type: integer
                         minimum: 1
+                      name:
+                        type: string
+                        description: Optional product name to seed/update catalog
+                      tags:
+                        type: array
+                        items:
+                          type: string
+                        description: Optional tags to seed/update catalog
+                      ingredients:
+                        type: array
+                        items:
+                          type: string
+                        description: Optional ingredients to seed/update catalog
+                      nutrition:
+                        type: object
+                        description: Optional per-unit nutrition facts to seed/update catalog
                       name:
                         type: string
                         description: Optional product name to seed/update catalog
@@ -323,6 +336,13 @@ paths:
           application/json:
             schema:
               type: object
+              required: [upc]
+              properties:
+                upc:
+                  type: string
+                units:
+                  type: integer
+                  minimum: 1
       responses:
         '200':
           description: Stock consumed
@@ -338,6 +358,15 @@ paths:
           application/json:
             schema:
               type: object
+              required: [upc, units, reason]
+              properties:
+                upc:
+                  type: string
+                units:
+                  type: integer
+                  minimum: 1
+                reason:
+                  type: string
       responses:
         '200':
           description: Stock removed
