@@ -1,15 +1,22 @@
+import asyncio
+from typing import Dict
+
 from fastapi import HTTPException, status
 from motor.motor_asyncio import AsyncIOMotorClient
 from pymongo.server_api import ServerApi
 
 from gpt_db.core.env import get_mongo_uri
 
-_mongo_client: AsyncIOMotorClient | None = None
+# Cache clients per running asyncio event loop. This avoids reusing a client
+# across different loops (common in serverless), which causes runtime errors.
+_clients_by_loop: Dict[int, AsyncIOMotorClient] = {}
 
 
 def get_mongo_client() -> AsyncIOMotorClient:
-    global _mongo_client
-    if _mongo_client is None:
+    loop = asyncio.get_running_loop()
+    loop_id = id(loop)
+    client = _clients_by_loop.get(loop_id)
+    if client is None:
         uri = get_mongo_uri()
         if not uri:
             raise HTTPException(
@@ -17,17 +24,20 @@ def get_mongo_client() -> AsyncIOMotorClient:
                 detail="Server not configured: set MONGO_URI",
             )
         # Use MongoDB Stable API v1 for compatibility with Atlas strict clusters
-        _mongo_client = AsyncIOMotorClient(
+        client = AsyncIOMotorClient(
             uri,
             appname="gpt-db",
             server_api=ServerApi("1"),
         )
-    return _mongo_client
+        _clients_by_loop[loop_id] = client
+    return client
 
 
 def close_mongo_client() -> None:
-    """Close and reset the cached MongoDB client."""
-    global _mongo_client
-    if _mongo_client is not None:
-        _mongo_client.close()
-        _mongo_client = None
+    """Close and reset all cached MongoDB clients."""
+    for client in list(_clients_by_loop.values()):
+        try:
+            client.close()
+        except Exception:
+            pass
+    _clients_by_loop.clear()
