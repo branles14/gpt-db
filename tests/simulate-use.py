@@ -180,11 +180,11 @@ def stock_remove(client: APIClient, payload: Any) -> None:
 
 
 @stock.command("delete")
-@click.argument("stock_id")
+@click.argument("stock_uuid")
 @click.pass_obj
-def stock_delete(client: APIClient, stock_id: str) -> None:
-    """Delete a stock row by its ID."""
-    client.request("DELETE", f"/food/stock/{stock_id}")
+def stock_delete(client: APIClient, stock_uuid: str) -> None:
+    """Delete a stock row by its UUID."""
+    client.request("DELETE", f"/food/stock/{stock_uuid}")
 
 
 # Log commands

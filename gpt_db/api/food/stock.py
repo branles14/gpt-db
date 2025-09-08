@@ -1,4 +1,5 @@
 from datetime import datetime
+from uuid import uuid4
 from typing import Any, Dict, List, Optional
 
 from bson import ObjectId, errors as bson_errors
@@ -84,10 +85,20 @@ class ConsumeItem(BaseModel):
 
 
 def _serialize(doc: Dict[str, Any]) -> Dict[str, Any]:
-    """Convert Mongo document to JSON-serializable dict."""
+    """Convert Mongo document to JSON-serializable dict.
+
+    Stock documents expose "uuid" as the identifier and do not leak Mongo _id.
+    """
     result = dict(doc)
+    # Ensure uuid is a string output; do not expose _id
+    if "uuid" in result and isinstance(result["uuid"], (bytes, bytearray)):
+        result["uuid"] = result["uuid"].decode()
     if "_id" in result:
-        result["_id"] = str(result["_id"])
+        # Do not include Mongo's _id in API responses
+        result.pop("_id", None)
+    # Normalize product_id to string if present
+    if "product_id" in result and isinstance(result["product_id"], ObjectId):
+        result["product_id"] = str(result["product_id"])
     return result
 
 
@@ -101,7 +112,13 @@ async def get_food_stock(
         collection = client.get_database("food").get_collection("stock")
         if view == "items":
             cursor = collection.find()
-            items = [_serialize(doc) async for doc in cursor]
+            items: List[Dict[str, Any]] = []
+            async for doc in cursor:
+                if not doc.get("uuid"):
+                    new_uuid = str(uuid4())
+                    await collection.update_one({"_id": doc["_id"]}, {"$set": {"uuid": new_uuid}})
+                    doc["uuid"] = new_uuid
+                items.append(_serialize(doc))
         else:
             pipeline = [
                 {
@@ -144,7 +161,7 @@ async def add_food_stock(payload: AddStockRequest) -> JSONResponse:
         db = client.get_database("food")
         collection = db.get_collection("stock")
         catalog = db.get_collection("catalog")
-        upserted_ids: List[str] = []
+        upserted_uuids: List[str] = []
         for item in payload.items:
             filter: Dict[str, Any]
             set_fields: Dict[str, Any] = {}
@@ -245,7 +262,10 @@ async def add_food_stock(payload: AddStockRequest) -> JSONResponse:
                 if nutrition:
                     set_fields["nutrition"] = nutrition
 
-            update_doc: Dict[str, Any] = {"$inc": {"quantity": item.quantity}}
+            update_doc: Dict[str, Any] = {
+                "$inc": {"quantity": item.quantity},
+                "$setOnInsert": {"uuid": str(uuid4())},
+            }
             if set_fields:
                 update_doc["$set"] = set_fields
 
@@ -254,11 +274,17 @@ async def add_food_stock(payload: AddStockRequest) -> JSONResponse:
                 update_doc,
                 upsert=True,
             )
-            if result.upserted_id:
-                upserted_ids.append(str(result.upserted_id))
+            # Fetch the latest document to get its uuid (and backfill if missing)
+            doc = await collection.find_one(filter)
+            if doc and not doc.get("uuid"):
+                new_uuid = str(uuid4())
+                await collection.update_one(filter, {"$set": {"uuid": new_uuid}})
+                doc["uuid"] = new_uuid
+            if doc and doc.get("uuid"):
+                upserted_uuids.append(str(doc.get("uuid")))
         return JSONResponse(
             status_code=status.HTTP_201_CREATED,
-            content={"upserted_ids": upserted_ids},
+            content={"upserted_uuids": upserted_uuids},
         )
     except bson_errors.InvalidId:
         return JSONResponse(
@@ -387,24 +413,19 @@ async def remove_stock(item: ConsumeItem) -> JSONResponse:
         )
 
 
-@router.delete("/stock/{stock_id}", dependencies=[Depends(require_api_key)])
-async def delete_stock_row(stock_id: str) -> JSONResponse:
-    """Delete a specific stock document by ID."""
+@router.delete("/stock/{stock_uuid}", dependencies=[Depends(require_api_key)])
+async def delete_stock_row(stock_uuid: str) -> JSONResponse:
+    """Delete a specific stock document by its UUID."""
     try:
         client = get_mongo_client()
         collection = client.get_database("food").get_collection("stock")
-        result = await collection.delete_one({"_id": ObjectId(stock_id)})
+        result = await collection.delete_one({"uuid": stock_uuid})
         if result.deleted_count == 0:
             return JSONResponse(
                 status_code=status.HTTP_404_NOT_FOUND,
                 content={"error": "Stock item not found"},
             )
         return JSONResponse(content={"deleted": True})
-    except bson_errors.InvalidId:
-        return JSONResponse(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            content={"error": "Invalid stock_id"},
-        )
     except HTTPException:
         raise
     except Exception as e:

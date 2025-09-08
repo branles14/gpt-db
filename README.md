@@ -21,10 +21,10 @@ A unified [OpenAPI 3.1 specification](openapi.yaml) consolidates all routes unde
   - `DELETE /food/catalog/{product_id}` – delete a product (`force=true` to bypass reference checks).
 - `/food/stock`:
   - `GET` – list stock with `view=aggregate|items`.
-  - `POST` – add units via `{ upc|product_id, quantity }`.
+  - `POST` – add units via `{ upc|product_id, quantity }`. When adding by `upc`, optional fields (`name`, `tags`, `ingredients`, `nutrition`) seed or update the catalog.
   - `POST /food/stock/consume` – atomic decrement with log.
   - `POST /food/stock/remove` – decrement with a `reason` (no nutrition log).
-  - `DELETE /food/stock/{stock_id}` – remove a specific stock row.
+  - `DELETE /food/stock/{stock_uuid}` – remove a specific stock row.
 - `/food/log`:
   - `GET` – list entries for a day (`date=YYYY-MM-DD`) with totals and remaining targets.
   - `POST` – append a log entry manually.
@@ -137,7 +137,7 @@ curl -sS -X POST \
   -H "x-api-key: ${API_KEY}" \
   -d '{"items": [{"upc": "0001", "quantity": 3}]}' \
   http://localhost:${PORT:-8000}/food/stock
-# -> {"upserted_ids": ["..."]}
+# -> {"upserted_uuids": ["..."]}
 
 - Add to stock and sync catalog details:
 

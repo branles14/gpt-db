@@ -94,7 +94,7 @@ curl -sS -X POST \
 ```
 
 ```json
-{ "upserted_ids": ["64def..."] }
+{ "upserted_uuids": ["550e8400-e29b-41d4-a716-446655440000"] }
 ```
 
 ### `POST /food/stock/consume`
@@ -127,12 +127,12 @@ curl -sS -X POST \
 { "remaining": 1 }
 ```
 
-### `DELETE /food/stock/{stock_id}`
+### `DELETE /food/stock/{stock_uuid}`
 Remove a specific stock document.
 
 ```bash
 curl -sS -X DELETE -H "x-api-key: ${API_KEY}" \
-  https://<host>/food/stock/64abcdeffedcba0123456789
+  https://<host>/food/stock/550e8400-e29b-41d4-a716-446655440000
 ```
 
 ```json

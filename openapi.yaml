@@ -292,6 +292,22 @@ paths:
                       quantity:
                         type: integer
                         minimum: 1
+                      name:
+                        type: string
+                        description: Optional product name to seed/update catalog
+                      tags:
+                        type: array
+                        items:
+                          type: string
+                        description: Optional tags to seed/update catalog
+                      ingredients:
+                        type: array
+                        items:
+                          type: string
+                        description: Optional ingredients to seed/update catalog
+                      nutrition:
+                        type: object
+                        description: Optional per-unit nutrition facts to seed/update catalog
       responses:
         '201':
           description: Stock added
@@ -325,7 +341,7 @@ paths:
       responses:
         '200':
           description: Stock removed
-  /food/stock/{stock_id}:
+  /food/stock/{stock_uuid}:
     delete:
       summary: Delete specific stock row
       operationId: deleteStockRow
@@ -333,7 +349,7 @@ paths:
         - food
       parameters:
         - in: path
-          name: stock_id
+          name: stock_uuid
           required: true
           schema:
             type: string
