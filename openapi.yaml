@@ -215,27 +215,13 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                  message:
-                    type: string
-                  item:
-                    type: object
+                $ref: '#/components/schemas/CatalogItemResponse'
         '201':
           description: Product created
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                  message:
-                    type: string
-                  item:
-                    type: object
+                $ref: '#/components/schemas/CatalogItemResponse'
   /food/catalog/{product_id}:
     get:
       summary: Retrieve product by ID
@@ -275,14 +261,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                  message:
-                    type: string
-                  deleted:
-                    type: boolean
+                $ref: '#/components/schemas/DeletionResponse'
   /food/stock:
     get:
       summary: List stock
@@ -346,18 +325,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                  message:
-                    type: string
-                  upserted_uuids:
-                    type: array
-                    items:
-                      type: string
-                  count:
-                    type: integer
+                $ref: '#/components/schemas/StockUpdatedResponse'
   /food/stock/consume:
     post:
       summary: Consume stock and log nutrition
@@ -383,14 +351,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                  message:
-                    type: string
-                  remaining:
-                    type: integer
+                $ref: '#/components/schemas/StockRemainingResponse'
   /food/stock/remove:
     post:
       summary: Remove stock without log
@@ -418,14 +379,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                  message:
-                    type: string
-                  remaining:
-                    type: integer
+                $ref: '#/components/schemas/StockRemainingResponse'
   /food/stock/{stock_uuid}:
     delete:
       summary: Delete specific stock row
@@ -444,14 +398,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                  message:
-                    type: string
-                  deleted:
-                    type: boolean
+                $ref: '#/components/schemas/DeletionResponse'
   /food/log:
     get:
       summary: Retrieve log entries
@@ -485,14 +432,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                  message:
-                    type: string
-                  log_id:
-                    type: string
+                $ref: '#/components/schemas/LogAppendResponse'
   /food/log/{log_id}:
     delete:
       summary: Delete log entry
@@ -511,14 +451,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                  message:
-                    type: string
-                  deleted:
-                    type: boolean
+                $ref: '#/components/schemas/DeletionResponse'
   /food/log/undo:
     post:
       summary: Undo most recent log entry
@@ -531,14 +464,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                  message:
-                    type: string
-                  deleted_id:
-                    type: string
+                $ref: '#/components/schemas/LogUndoResponse'
   /food/targets:
     get:
       summary: Get macro targets
@@ -558,25 +484,7 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                calories:
-                  type: number
-                  minimum: 0
-                  description: Target calories
-                protein:
-                  type: number
-                  minimum: 0
-                  description: Target protein grams
-                fat:
-                  type: number
-                  minimum: 0
-                  description: Target fat grams
-                carbs:
-                  type: number
-                  minimum: 0
-                  description: Target carbohydrate grams
-              additionalProperties: false
+              $ref: '#/components/schemas/FoodTargetsPatch'
       responses:
         '200':
           description: Targets updated
@@ -609,5 +517,76 @@ components:
       type: apiKey
       in: header
       name: x-api-key
+  schemas:
+    SuccessEnvelope:
+      type: object
+      required: [success]
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+    CatalogItemResponse:
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+        - type: object
+          properties:
+            item:
+              type: object
+    DeletionResponse:
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+        - type: object
+          properties:
+            deleted:
+              type: boolean
+    StockUpdatedResponse:
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+        - type: object
+          properties:
+            upserted_uuids:
+              type: array
+              items:
+                type: string
+            count:
+              type: integer
+    StockRemainingResponse:
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+        - type: object
+          properties:
+            remaining:
+              type: integer
+    LogAppendResponse:
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+        - type: object
+          properties:
+            log_id:
+              type: string
+    LogUndoResponse:
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+        - type: object
+          properties:
+            deleted_id:
+              type: string
+    FoodTargetsPatch:
+      type: object
+      properties:
+        calories:
+          type: number
+          minimum: 0
+        protein:
+          type: number
+          minimum: 0
+        fat:
+          type: number
+          minimum: 0
+        carbs:
+          type: number
+          minimum: 0
+      additionalProperties: false
 security:
   - ApiKeyAuth: []
