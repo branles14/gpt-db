@@ -23,17 +23,19 @@ curl -sS -H "x-api-key: ${API_KEY}" \
 ### `POST /food/catalog`
 Create or update a product by `upc`.
 
+Optional nutrition facts per unit: `calories`, `protein`, `fat`, `carbs`.
+
 ```bash
 curl -sS -X POST \
   -H "Content-Type: application/json" \
   -H "x-api-key: ${API_KEY}" \
-  -d '{"upc":"0001","name":"Apple","calories":95}' \
+  -d '{"upc":"0001","name":"Apple","calories":95,"protein":0.5,"fat":0.3,"carbs":25}' \
   https://<host>/food/catalog
 ```
 
 ```json
 {
-  "item": { "_id": "64abc...", "upc": "0001", "name": "Apple", "calories": 95 }
+  "item": { "_id": "64abc...", "upc": "0001", "name": "Apple", "calories": 95, "protein": 0.5, "fat": 0.3, "carbs": 25 }
 }
 ```
 
@@ -192,4 +194,3 @@ curl -sS -X POST -H "x-api-key: ${API_KEY}" \
 ```json
 { "deleted_id": "64abc..." }
 ```
-

@@ -80,6 +80,22 @@ paths:
                   items:
                     type: string
                   description: Category labels for the product
+                calories:
+                  type: number
+                  minimum: 0
+                  description: Calories per unit
+                protein:
+                  type: number
+                  minimum: 0
+                  description: Protein grams per unit
+                fat:
+                  type: number
+                  minimum: 0
+                  description: Fat grams per unit
+                carbs:
+                  type: number
+                  minimum: 0
+                  description: Carbohydrate grams per unit
       responses:
         '201':
           description: Created

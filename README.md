@@ -16,7 +16,7 @@ A unified [OpenAPI 3.1 specification](openapi.yaml) consolidates all routes unde
 - `/redoc`: Interactive API docs. Requires `x-api-key` header.
 - `/food/catalog`:
   - `GET` – list products with optional filters (`q`, `upc`, `tag`).
-  - `POST` – create or update a product by `upc`; accepts optional `tags` array.
+  - `POST` – create or update a product by `upc`; accepts optional `tags` and nutrition fields (`calories`, `protein`, `fat`, `carbs`) per unit.
   - `GET /food/catalog/{product_id}` – retrieve a product.
   - `DELETE /food/catalog/{product_id}` – delete a product (`force=true` to bypass reference checks).
 - `/food/stock`:
@@ -92,15 +92,23 @@ curl -sS \
 # -> {"items": [...]}  # product list
 ```
 
-- Upsert a product:
+- Upsert a product (with nutrition facts):
 
 ```bash
 curl -sS -X POST \
   -H "Content-Type: application/json" \
   -H "x-api-key: ${API_KEY}" \
-  -d '{"upc": "0001", "name": "Apple", "tags": ["fruit"]}' \
+  -d '{
+        "upc": "0001",
+        "name": "Apple",
+        "tags": ["fruit"],
+        "calories": 95,
+        "protein": 0.5,
+        "fat": 0.3,
+        "carbs": 25
+      }' \
   http://localhost:${PORT:-8000}/food/catalog
-# -> {"item": {"_id": "...", "upc": "0001", "name": "Apple", "tags": ["fruit"]}}
+# -> {"item": {"_id": "...", "upc": "0001", "name": "Apple", "tags": ["fruit"], "calories":95, "protein":0.5, "fat":0.3, "carbs":25}}
 ```
 
 - Read food stock (requires API key):

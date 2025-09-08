@@ -3,7 +3,7 @@ from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, Depends, Query, status
 from fastapi.responses import JSONResponse
 from bson import ObjectId, errors as bson_errors
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from pydantic.config import ConfigDict
 
 from gpt_db.api.deps import require_api_key
@@ -29,6 +29,11 @@ class Product(BaseModel):
     name: str
     upc: Optional[str] = None
     tags: Optional[List[str]] = None
+    # Optional nutrition facts per unit
+    calories: Optional[float] = Field(default=None, ge=0)
+    protein: Optional[float] = Field(default=None, ge=0)
+    fat: Optional[float] = Field(default=None, ge=0)
+    carbs: Optional[float] = Field(default=None, ge=0)
 
 
 @router.get("/catalog", dependencies=[Depends(require_api_key)])
