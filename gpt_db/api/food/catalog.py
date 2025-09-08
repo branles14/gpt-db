@@ -190,6 +190,11 @@ async def upsert_product(product: Product) -> JSONResponse:
                 {"upc": payload["upc"]}, {"$set": payload}, upsert=True
             )
             doc = await collection.find_one({"upc": payload["upc"]})
+            if not result.acknowledged or not doc:
+                return error_response(
+                    message="Failed to persist product",
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                )
             created = result.upserted_id is not None
             return success_response(
                 content={"item": _serialize(doc)},
@@ -201,6 +206,11 @@ async def upsert_product(product: Product) -> JSONResponse:
         else:
             result = await collection.insert_one(payload)
             doc = await collection.find_one({"_id": result.inserted_id})
+            if not result.acknowledged or not doc:
+                return error_response(
+                    message="Failed to persist product",
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                )
             return success_response(
                 content={"item": _serialize(doc)},
                 message="Product created",
