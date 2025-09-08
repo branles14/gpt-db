@@ -165,8 +165,8 @@ async def list_products(
             filters["upc"] = upc
         if tag:
             filters["tags"] = tag
-        docs = await collection.find(filters).to_list(length=None)
-        items = [_serialize(doc) for doc in docs]
+        cursor = collection.find(filters)
+        items = [_serialize(doc) async for doc in cursor]
         return JSONResponse(content={"items": items})
     except HTTPException:
         raise

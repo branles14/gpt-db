@@ -66,8 +66,8 @@ async def get_food_stock(
         client = get_mongo_client()
         collection = client.get_database("food").get_collection("stock")
         if view == "items":
-            docs = await collection.find().to_list(length=None)
-            items = [_serialize(doc) for doc in docs]
+            cursor = collection.find()
+            items = [_serialize(doc) async for doc in cursor]
         else:
             pipeline = [
                 {
@@ -77,19 +77,20 @@ async def get_food_stock(
                     }
                 }
             ]
-            docs = await collection.aggregate(pipeline).to_list(length=None)
-            items = [
-                {
-                    "product_id": (
-                        str(doc["_id"].get("product_id"))
-                        if doc["_id"].get("product_id")
-                        else None
-                    ),
-                    "upc": doc["_id"].get("upc"),
-                    "quantity": doc.get("quantity", 0),
-                }
-                for doc in docs
-            ]
+            agg_cursor = collection.aggregate(pipeline)
+            items = []
+            async for doc in agg_cursor:
+                items.append(
+                    {
+                        "product_id": (
+                            str(doc["_id"].get("product_id"))
+                            if doc["_id"].get("product_id")
+                            else None
+                        ),
+                        "upc": doc["_id"].get("upc"),
+                        "quantity": doc.get("quantity", 0),
+                    }
+                )
         return JSONResponse(content={"items": items})
     except HTTPException:
         # Propagate config/auth errors verbatim

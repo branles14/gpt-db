@@ -62,11 +62,11 @@ async def get_log(date: Optional[str] = Query(default=None)) -> JSONResponse:
         db = client.get_database("food")
         log_col = db.get_collection("log")
         catalog_col = db.get_collection("catalog")
-        docs = (
-            await log_col.find({"timestamp": {"$gte": start, "$lt": end}})
+        cursor = (
+            log_col.find({"timestamp": {"$gte": start, "$lt": end}})
             .sort("timestamp")
-            .to_list(length=None)
         )
+        docs = [doc async for doc in cursor]
         entries: List[Dict[str, Any]] = []
         totals = {k: 0.0 for k in DAILY_TARGETS}
         for doc in docs:
