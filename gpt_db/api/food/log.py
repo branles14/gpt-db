@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
 
 from bson import ObjectId, errors as bson_errors
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, Query, status, HTTPException
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, model_validator
 
@@ -108,6 +108,8 @@ async def get_log(date: Optional[str] = Query(default=None)) -> JSONResponse:
             status_code=status.HTTP_400_BAD_REQUEST,
             content={"error": "Invalid date format"},
         )
+    except HTTPException:
+        raise
     except Exception as e:
         content = format_mongo_error(e)
         return JSONResponse(
@@ -137,6 +139,8 @@ async def append_log(entry: LogEntry) -> JSONResponse:
             status_code=status.HTTP_400_BAD_REQUEST,
             content={"error": "Invalid product_id"},
         )
+    except HTTPException:
+        raise
     except Exception as e:
         content = format_mongo_error(e)
         return JSONResponse(
@@ -167,6 +171,8 @@ async def delete_log(log_id: str) -> JSONResponse:
             status_code=status.HTTP_400_BAD_REQUEST,
             content={"error": "Invalid log_id"},
         )
+    except HTTPException:
+        raise
     except Exception as e:
         content = format_mongo_error(e)
         return JSONResponse(

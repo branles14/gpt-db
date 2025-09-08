@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 from bson import ObjectId, errors as bson_errors
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, Query, status, HTTPException
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, model_validator
 from pymongo import ReturnDocument
@@ -91,6 +91,9 @@ async def get_food_stock(
                 for doc in docs
             ]
         return JSONResponse(content={"items": items})
+    except HTTPException:
+        # Propagate config/auth errors verbatim
+        raise
     except Exception as e:
         content = format_mongo_error(e)
         return JSONResponse(
@@ -127,6 +130,8 @@ async def add_food_stock(payload: AddStockRequest) -> JSONResponse:
             status_code=status.HTTP_400_BAD_REQUEST,
             content={"error": "Invalid product_id"},
         )
+    except HTTPException:
+        raise
     except Exception as e:
         content = format_mongo_error(e)
         return JSONResponse(
@@ -180,6 +185,8 @@ async def consume_stock(item: ConsumeItem) -> JSONResponse:
             status_code=status.HTTP_400_BAD_REQUEST,
             content={"error": "Invalid product_id"},
         )
+    except HTTPException:
+        raise
     except Exception as e:
         content = format_mongo_error(e)
         return JSONResponse(
@@ -236,6 +243,8 @@ async def remove_stock(item: ConsumeItem) -> JSONResponse:
             status_code=status.HTTP_400_BAD_REQUEST,
             content={"error": "Invalid product_id"},
         )
+    except HTTPException:
+        raise
     except Exception as e:
         content = format_mongo_error(e)
         return JSONResponse(
@@ -261,6 +270,8 @@ async def delete_stock_row(stock_id: str) -> JSONResponse:
             status_code=status.HTTP_400_BAD_REQUEST,
             content={"error": "Invalid stock_id"},
         )
+    except HTTPException:
+        raise
     except Exception as e:
         content = format_mongo_error(e)
         return JSONResponse(

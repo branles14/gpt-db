@@ -1,6 +1,6 @@
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, Query, status, HTTPException
 from fastapi.responses import JSONResponse
 from bson import ObjectId, errors as bson_errors
 from pydantic import BaseModel, Field, model_validator, field_validator
@@ -168,6 +168,8 @@ async def list_products(
         docs = await collection.find(filters).to_list(length=None)
         items = [_serialize(doc) for doc in docs]
         return JSONResponse(content={"items": items})
+    except HTTPException:
+        raise
     except Exception as e:
         content = format_mongo_error(e)
         return JSONResponse(
@@ -194,6 +196,8 @@ async def upsert_product(product: Product) -> JSONResponse:
         return JSONResponse(
             status_code=status.HTTP_201_CREATED, content={"item": _serialize(doc)}
         )
+    except HTTPException:
+        raise
     except Exception as e:
         content = format_mongo_error(e)
         return JSONResponse(
@@ -219,6 +223,8 @@ async def get_product(product_id: str) -> JSONResponse:
             status_code=status.HTTP_400_BAD_REQUEST,
             content={"error": "Invalid product_id"},
         )
+    except HTTPException:
+        raise
     except Exception as e:
         content = format_mongo_error(e)
         return JSONResponse(

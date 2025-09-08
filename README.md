@@ -48,6 +48,9 @@ cp .env.example .env
 - `MONGO_URI`: Atlas connection string (recommended). Example:
   `mongodb+srv://<user>:<pass>@<cluster>/?retryWrites=true&w=majority`
 
+Note: The server connects using MongoDB Stable API v1 to maximize
+compatibility with Atlas clusters that enable strict API mode.
+
 3) Start the server (defaults to port `8000`):
 
 ```bash
@@ -198,6 +201,22 @@ python tests/simulate-use.py --help
 python tests/simulate-use.py root
 python tests/simulate-use.py list --api-key ${API_KEY} --api-url http://localhost:${PORT:-8000}
 ```
+
+## Deployment (Vercel)
+
+- Use `@vercel/python` with the provided `vercel.json`.
+- Set environment variables in your Vercel project: `API_KEY` and `MONGO_URI`.
+- This service opens a fresh connection per server instance and caches the
+  client; serverless cold starts will recreate a client as needed.
+
+## Troubleshooting
+
+- API returns `DatabaseConnectionError`, but `tests/ping-mongo.py` works locally:
+  - Ensure your Atlas Network Access allows Vercel IPs or use `0.0.0.0/0` for testing.
+  - Confirm `MONGO_URI` is set in Vercel Environment Variables (Production/Preview).
+  - The app uses MongoDB Stable API v1 via Motor/PyMongo, matching the sample ping script.
+  - If `MONGO_URI` is missing, endpoints now return HTTP 500 with
+    `Server not configured: set MONGO_URI` instead of a generic 503.
 
 Commands mirror the API structure. JSON payloads may be passed directly or
 from a file by prefixing the path with `@`.

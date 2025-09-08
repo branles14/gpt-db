@@ -1,4 +1,5 @@
 from motor.motor_asyncio import AsyncIOMotorClient
+from pymongo.server_api import ServerApi
 
 from gpt_db.core.env import get_mongo_uri
 
@@ -11,7 +12,7 @@ async def mongo_status() -> dict[str, str]:
     """
     client: AsyncIOMotorClient | None = None
     try:
-        client = AsyncIOMotorClient(get_mongo_uri())
+        client = AsyncIOMotorClient(get_mongo_uri(), server_api=ServerApi("1"))
         await client.admin.command("ping")
         return {"status": "ok"}
     except Exception as e:
