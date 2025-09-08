@@ -426,6 +426,21 @@ paths:
           application/json:
             schema:
               type: object
+              properties:
+                product_id:
+                  type: string
+                  description: Product ObjectId as hex string
+                upc:
+                  type: string
+                  description: Product UPC code
+                units:
+                  type: integer
+                  minimum: 1
+                  description: Number of units consumed (default 1)
+                timestamp:
+                  type: string
+                  format: date-time
+                  description: ISO timestamp; defaults to server time
       responses:
         '201':
           description: Log entry created
@@ -484,7 +499,21 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/FoodTargetsPatch'
+              type: object
+              properties:
+                calories:
+                  type: number
+                  minimum: 0
+                protein:
+                  type: number
+                  minimum: 0
+                fat:
+                  type: number
+                  minimum: 0
+                carbs:
+                  type: number
+                  minimum: 0
+              additionalProperties: false
       responses:
         '200':
           description: Targets updated
