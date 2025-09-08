@@ -80,6 +80,11 @@ paths:
                   items:
                     type: string
                   description: Category labels for the product
+                ingredients:
+                  type: array
+                  items:
+                    type: string
+                  description: Ingredient list for the product
                 nutrition:
                   type: object
                   description: Per-unit nutrition facts

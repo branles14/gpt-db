@@ -20,7 +20,7 @@
 
 ### Catalog
 
-The catalog holds information about foods.
+The catalog holds information about foods. Product payload supports `name`, optional `upc`, optional `tags` and optional `ingredients` (arrays of strings), plus a nested `nutrition` object for per‑unit facts.
 
 ### Stock
 

@@ -3,7 +3,7 @@ from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, Depends, Query, status
 from fastapi.responses import JSONResponse
 from bson import ObjectId, errors as bson_errors
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, model_validator, field_validator
 from pydantic.config import ConfigDict
 
 from gpt_db.api.deps import require_api_key
@@ -77,7 +77,8 @@ class Product(BaseModel):
 
     name: str
     upc: Optional[str] = None
-    tags: Optional[List[str]] = None
+    tags: Optional[List[str]] = Field(default=None, min_length=1)
+    ingredients: Optional[List[str]] = Field(default=None, min_length=1)
 
     # Nested nutrition object (preferred)
     nutrition: Optional[NutritionFacts] = None
@@ -87,6 +88,39 @@ class Product(BaseModel):
     protein: Optional[float] = Field(default=None, ge=0)
     fat: Optional[float] = Field(default=None, ge=0)
     carbs: Optional[float] = Field(default=None, ge=0)
+
+    @field_validator("tags", "ingredients", mode="before")
+    @classmethod
+    def _normalize_string_list(cls, v: Any) -> Optional[List[str]]:
+        """Normalize list fields to unique, trimmed strings.
+
+        - Accept a single string or list-like input
+        - Trim whitespace, drop empty entries
+        - De-duplicate case-insensitively while preserving original case
+        """
+        if v is None:
+            return None
+        # Allow passing a single string
+        if isinstance(v, str):
+            v = [v]
+        if not isinstance(v, list):
+            # Coerce other iterables to list of strings if possible
+            try:
+                v = list(v)  # type: ignore[arg-type]
+            except Exception as _:
+                raise TypeError("Expected a string or list of strings")
+        seen: set[str] = set()
+        result: List[str] = []
+        for item in v:
+            item_str = str(item).strip()
+            if not item_str:
+                continue
+            key = item_str.lower()
+            if key in seen:
+                continue
+            seen.add(key)
+            result.append(item_str)
+        return result or None
 
     @model_validator(mode="after")
     def _merge_top_level_macros(self) -> "Product":

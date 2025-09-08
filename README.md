@@ -16,7 +16,7 @@ A unified [OpenAPI 3.1 specification](openapi.yaml) consolidates all routes unde
 - `/redoc`: Interactive API docs. Requires `x-api-key` header.
 - `/food/catalog`:
   - `GET` – list products with optional filters (`q`, `upc`, `tag`).
-  - `POST` – create or update a product by `upc`; accepts optional `tags` and a nested `nutrition` object with macros, vitamins, and minerals per unit. For backward compatibility, top‑level macro fields are accepted and merged into `nutrition`.
+  - `POST` – create or update a product by `upc`; accepts optional `tags`, `ingredients`, and a nested `nutrition` object with macros, vitamins, and minerals per unit. For backward compatibility, top‑level macro fields are accepted and merged into `nutrition`.
   - `GET /food/catalog/{product_id}` – retrieve a product.
   - `DELETE /food/catalog/{product_id}` – delete a product (`force=true` to bypass reference checks).
 - `/food/stock`:
@@ -102,6 +102,7 @@ curl -sS -X POST \
         "upc": "0001",
         "name": "Apple",
         "tags": ["fruit"],
+        "ingredients": ["apple"],
         "nutrition": {
           "calories": 95,
           "protein": 0.5,
@@ -113,7 +114,7 @@ curl -sS -X POST \
         }
       }' \
   http://localhost:${PORT:-8000}/food/catalog
-# -> {"item": {"_id": "...", "upc": "0001", "name": "Apple", "tags": ["fruit"], "nutrition": {"calories":95,"protein":0.5,"fat":0.3,"carbs":25,"fiber":4.4,"vitamin_c_mg":8.4,"potassium_mg":195}}}
+# -> {"item": {"_id": "...", "upc": "0001", "name": "Apple", "tags": ["fruit"], "ingredients": ["apple"], "nutrition": {"calories":95,"protein":0.5,"fat":0.3,"carbs":25,"fiber":4.4,"vitamin_c_mg":8.4,"potassium_mg":195}}}
 ```
 
 - Read food stock (requires API key):
