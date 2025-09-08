@@ -305,22 +305,6 @@ paths:
                       nutrition:
                         type: object
                         description: Optional per-unit nutrition facts to seed/update catalog
-                      name:
-                        type: string
-                        description: Optional product name to seed/update catalog
-                      tags:
-                        type: array
-                        items:
-                          type: string
-                        description: Optional tags to seed/update catalog
-                      ingredients:
-                        type: array
-                        items:
-                          type: string
-                        description: Optional ingredients to seed/update catalog
-                      nutrition:
-                        type: object
-                        description: Optional per-unit nutrition facts to seed/update catalog
       responses:
         '201':
           description: Stock added
