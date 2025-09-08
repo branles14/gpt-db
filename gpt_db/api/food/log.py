@@ -16,10 +16,11 @@ router = APIRouter(prefix="/food", tags=["food"])
 
 DAILY_TARGETS: Dict[str, float] = {
     "calories": 2000,
-    "protein": 150,
-    "fat": 70,
-    "carbs": 250,
-}
+    "protein": 50,
+    "fat": 78,
+    "carbs": 275,
+}  # FDA Daily Values for adults and children ≥4 yrs
+# Source: https://www.fda.gov/food/new-nutrition-facts-label/daily-value-new-nutrition-and-supplement-facts-labels
 
 
 class LogEntry(BaseModel):
