@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field, model_validator, field_validator
 from pydantic.config import ConfigDict
 
 from gpt_db.api.deps import require_api_key
-from gpt_db.api.utils import format_mongo_error
+from gpt_db.api.utils import format_mongo_error, success_response, error_response
 from gpt_db.db.mongo import get_mongo_client
 
 router = APIRouter(prefix="/food", tags=["food"])
@@ -186,16 +186,26 @@ async def upsert_product(product: Product) -> JSONResponse:
         # Dump with deprecated top-level macros removed (merged into nutrition)
         payload = product.model_dump(exclude_none=True)
         if "upc" in payload:
-            await collection.update_one(
+            result = await collection.update_one(
                 {"upc": payload["upc"]}, {"$set": payload}, upsert=True
             )
             doc = await collection.find_one({"upc": payload["upc"]})
+            created = result.upserted_id is not None
+            return success_response(
+                content={"item": _serialize(doc)},
+                message="Product created" if created else "Product updated",
+                status_code=(
+                    status.HTTP_201_CREATED if created else status.HTTP_200_OK
+                ),
+            )
         else:
             result = await collection.insert_one(payload)
             doc = await collection.find_one({"_id": result.inserted_id})
-        return JSONResponse(
-            status_code=status.HTTP_201_CREATED, content={"item": _serialize(doc)}
-        )
+            return success_response(
+                content={"item": _serialize(doc)},
+                message="Product created",
+                status_code=status.HTTP_201_CREATED,
+            )
     except HTTPException:
         raise
     except Exception as e:
@@ -248,24 +258,22 @@ async def delete_product(product_id: str, force: bool = False) -> JSONResponse:
                 {"product_id": obj_id}
             )
             if stock_count > 0 or log_count > 0:
-                return JSONResponse(
+                return error_response(
+                    message=(
+                        "Product is referenced by stock or log; use force=true to delete"
+                    ),
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    content={
-                        "error": "Product is referenced by stock or log; use force=true to delete",
-                    },
                 )
 
         result = await db.get_collection("catalog").delete_one({"_id": obj_id})
         if result.deleted_count == 0:
-            return JSONResponse(
-                status_code=status.HTTP_404_NOT_FOUND,
-                content={"error": "Product not found"},
+            return error_response(
+                message="Product not found", status_code=status.HTTP_404_NOT_FOUND
             )
-        return JSONResponse(content={"deleted": True})
+        return success_response(content={"deleted": True}, message="Product deleted")
     except bson_errors.InvalidId:
-        return JSONResponse(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            content={"error": "Invalid product_id"},
+        return error_response(
+            message="Invalid product_id", status_code=status.HTTP_400_BAD_REQUEST
         )
     except Exception as e:
         content = format_mongo_error(e)

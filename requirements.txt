@@ -4,3 +4,4 @@ python-dotenv
 motor
 click
 httpx
+openapi-spec-validator

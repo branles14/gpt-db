@@ -210,8 +210,32 @@ paths:
                       minimum: 0
                       description: Vitamin B12 (mcg)
       responses:
+        '200':
+          description: Product updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  item:
+                    type: object
         '201':
-          description: Created
+          description: Product created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  item:
+                    type: object
   /food/catalog/{product_id}:
     get:
       summary: Retrieve product by ID
@@ -248,6 +272,17 @@ paths:
       responses:
         '200':
           description: Product deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  deleted:
+                    type: boolean
   /food/stock:
     get:
       summary: List stock
@@ -307,7 +342,22 @@ paths:
                         description: Optional per-unit nutrition facts to seed/update catalog
       responses:
         '201':
-          description: Stock added
+          description: Stock updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  upserted_uuids:
+                    type: array
+                    items:
+                      type: string
+                  count:
+                    type: integer
   /food/stock/consume:
     post:
       summary: Consume stock and log nutrition
@@ -330,6 +380,17 @@ paths:
       responses:
         '200':
           description: Stock consumed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  remaining:
+                    type: integer
   /food/stock/remove:
     post:
       summary: Remove stock without log
@@ -354,6 +415,17 @@ paths:
       responses:
         '200':
           description: Stock removed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  remaining:
+                    type: integer
   /food/stock/{stock_uuid}:
     delete:
       summary: Delete specific stock row
@@ -369,6 +441,17 @@ paths:
       responses:
         '200':
           description: Stock row deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  deleted:
+                    type: boolean
   /food/log:
     get:
       summary: Retrieve log entries
@@ -399,6 +482,17 @@ paths:
       responses:
         '201':
           description: Log entry created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  log_id:
+                    type: string
   /food/log/{log_id}:
     delete:
       summary: Delete log entry
@@ -414,6 +508,17 @@ paths:
       responses:
         '200':
           description: Log entry deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  deleted:
+                    type: boolean
   /food/log/undo:
     post:
       summary: Undo most recent log entry
@@ -423,6 +528,17 @@ paths:
       responses:
         '200':
           description: Log entry undone
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  deleted_id:
+                    type: string
   /food/targets:
     get:
       summary: Get macro targets

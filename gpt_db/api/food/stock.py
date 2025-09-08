@@ -10,7 +10,7 @@ from pydantic.config import ConfigDict
 from pymongo import ReturnDocument
 
 from gpt_db.api.deps import require_api_key
-from gpt_db.api.utils import format_mongo_error
+from gpt_db.api.utils import format_mongo_error, success_response, error_response
 from gpt_db.db.mongo import get_mongo_client
 from gpt_db.api.food.catalog import NutritionFacts
 
@@ -265,9 +265,10 @@ async def add_food_stock(payload: AddStockRequest) -> JSONResponse:
                 doc["uuid"] = new_uuid
             if doc and doc.get("uuid"):
                 upserted_uuids.append(str(doc.get("uuid")))
-        return JSONResponse(
+        return success_response(
+            content={"upserted_uuids": upserted_uuids, "count": len(upserted_uuids)},
+            message="Stock updated",
             status_code=status.HTTP_201_CREATED,
-            content={"upserted_uuids": upserted_uuids},
         )
     except HTTPException:
         raise
@@ -301,9 +302,9 @@ async def consume_stock(item: ConsumeItem) -> JSONResponse:
                 )
                 if not doc:
                     await session.abort_transaction()
-                    return JSONResponse(
+                    return error_response(
+                        message="Insufficient stock",
                         status_code=status.HTTP_400_BAD_REQUEST,
-                        content={"error": "Insufficient stock"},
                     )
                 await log_col.insert_one(
                     {
@@ -314,11 +315,10 @@ async def consume_stock(item: ConsumeItem) -> JSONResponse:
                     },
                     session=session,
                 )
-        return JSONResponse(content={"remaining": doc["quantity"]})
+        return success_response(content={"remaining": doc["quantity"]}, message="Stock consumed")
     except bson_errors.InvalidId:
-        return JSONResponse(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            content={"error": "Invalid product_id"},
+        return error_response(
+            message="Invalid product_id", status_code=status.HTTP_400_BAD_REQUEST
         )
     except HTTPException:
         raise
@@ -333,9 +333,8 @@ async def consume_stock(item: ConsumeItem) -> JSONResponse:
 async def remove_stock(item: ConsumeItem) -> JSONResponse:
     """Decrement stock without nutritional logging."""
     if not item.reason:
-        return JSONResponse(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            content={"error": "reason is required"},
+        return error_response(
+            message="reason is required", status_code=status.HTTP_400_BAD_REQUEST
         )
     try:
         client = get_mongo_client()
@@ -354,9 +353,9 @@ async def remove_stock(item: ConsumeItem) -> JSONResponse:
                 )
                 if not doc:
                     await session.abort_transaction()
-                    return JSONResponse(
+                    return error_response(
+                        message="Insufficient stock",
                         status_code=status.HTTP_400_BAD_REQUEST,
-                        content={"error": "Insufficient stock"},
                     )
                 await removal_col.insert_one(
                     {
@@ -368,11 +367,10 @@ async def remove_stock(item: ConsumeItem) -> JSONResponse:
                     },
                     session=session,
                 )
-        return JSONResponse(content={"remaining": doc["quantity"]})
+        return success_response(content={"remaining": doc["quantity"]}, message="Stock removed")
     except bson_errors.InvalidId:
-        return JSONResponse(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            content={"error": "Invalid product_id"},
+        return error_response(
+            message="Invalid product_id", status_code=status.HTTP_400_BAD_REQUEST
         )
     except HTTPException:
         raise
@@ -391,11 +389,10 @@ async def delete_stock_row(stock_uuid: str) -> JSONResponse:
         collection = client.get_database("food").get_collection("stock")
         result = await collection.delete_one({"uuid": stock_uuid})
         if result.deleted_count == 0:
-            return JSONResponse(
-                status_code=status.HTTP_404_NOT_FOUND,
-                content={"error": "Stock item not found"},
+            return error_response(
+                message="Stock item not found", status_code=status.HTTP_404_NOT_FOUND
             )
-        return JSONResponse(content={"deleted": True})
+        return success_response(content={"deleted": True}, message="Stock item deleted")
     except HTTPException:
         raise
     except Exception as e:

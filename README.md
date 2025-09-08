@@ -38,6 +38,15 @@ A unified [OpenAPI 3.1 specification](openapi.yaml) consolidates all routes unde
 
 Full request/response examples for `/food/catalog`, `/food/stock`, `/food/log`, and `/food/targets` are available in [gpt_db/api/food/README.md](gpt_db/api/food/README.md).
 
+## Response Conventions
+
+Mutating endpoints in catalog, stock, and log return a consistent envelope:
+
+- On success: `{ "success": true, "message": string, ...data }`
+- On failure: `{ "success": false, "error": string, ...details }`
+
+Read-only endpoints may omit the `success` flag and return data directly.
+
 ## Setup & Local Run
 
 1) Install dependencies and configure env:
@@ -122,7 +131,7 @@ curl -sS -X POST \
         }
       }' \
   http://localhost:${PORT:-8000}/food/catalog
-# -> {"item": {"_id": "...", "upc": "0001", "name": "Apple", "tags": ["fruit"], "ingredients": ["apple"], "nutrition": {"calories":95,"protein":0.5,"fat":0.3,"carbs":25,"fiber":4.4,"vitamin_c_mg":8.4,"potassium_mg":195}}}
+# -> {"success": true, "message": "Product created", "item": {"_id": "...", "upc": "0001", "name": "Apple", "tags": ["fruit"], "ingredients": ["apple"], "nutrition": {"calories":95,"protein":0.5,"fat":0.3,"carbs":25,"fiber":4.4,"vitamin_c_mg":8.4,"potassium_mg":195}}}
 ```
 
 - Read food stock (requires API key):
@@ -142,7 +151,7 @@ curl -sS -X POST \
   -H "x-api-key: ${API_KEY}" \
   -d '{"items": [{"upc": "0001", "quantity": 3}]}' \
   http://localhost:${PORT:-8000}/food/stock
-# -> {"upserted_uuids": ["..."]}
+# -> {"success": true, "message": "Stock updated", "upserted_uuids": ["..."], "count": 1}
 
 - Add to stock and sync catalog details:
 
@@ -175,7 +184,7 @@ curl -sS -X POST \
   -H "x-api-key: ${API_KEY}" \
   -d '{"upc": "0001", "units": 1}' \
   http://localhost:${PORT:-8000}/food/stock/consume
-# -> {"remaining": 2}
+# -> {"success": true, "message": "Stock consumed", "remaining": 2}
 ```
 
 - Remove stock (no log):
@@ -186,7 +195,7 @@ curl -sS -X POST \
   -H "x-api-key: ${API_KEY}" \
   -d '{"upc": "0001", "units": 1, "reason": "spoilage"}' \
   http://localhost:${PORT:-8000}/food/stock/remove
-# -> {"remaining": 1}
+# -> {"success": true, "message": "Stock removed", "remaining": 1}
 
 Notes:
 - Consuming/removing stock accepts UPC only (no product_id).
@@ -209,7 +218,7 @@ curl -sS -X POST \
   -H "x-api-key: ${API_KEY}" \
   -d '{"upc": "0001", "units": 1}' \
   http://localhost:${PORT:-8000}/food/log
-# -> {"log_id": "..."}
+# -> {"success": true, "message": "Log entry created", "log_id": "..."}
 ```
 
 - Undo the most recent log entry:
@@ -218,7 +227,7 @@ curl -sS -X POST \
 curl -sS -X POST \
   -H "x-api-key: ${API_KEY}" \
   http://localhost:${PORT:-8000}/food/log/undo
-# -> {"deleted_id": "..."}
+# -> {"success": true, "message": "Last log entry undone", "deleted_id": "..."}
 ```
 
 ## Simulate API usage (CLI)

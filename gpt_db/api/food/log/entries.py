@@ -8,30 +8,12 @@ from pydantic import BaseModel, Field, model_validator
 from pydantic.config import ConfigDict
 
 from gpt_db.api.deps import require_api_key
-from gpt_db.api.utils import format_mongo_error
+from gpt_db.api.utils import format_mongo_error, success_response, error_response
 from gpt_db.db.mongo import get_mongo_client
+from .common import _get_targets
 
 
 router = APIRouter(prefix="/food", tags=["food"])
-
-
-DV_DEFAULTS: Dict[str, float] = {
-    "calories": 2000,
-    "protein": 50,
-    "fat": 78,
-    "carbs": 275,
-}  # FDA Daily Values for adults and children ≥4 yrs
-# Source: https://www.fda.gov/food/new-nutrition-facts-label/daily-value-new-nutrition-and-supplement-facts-labels
-
-
-async def _get_targets(db) -> Dict[str, float]:
-    """Fetch current macro targets, falling back to DV defaults."""
-    col = db.get_collection("targets")
-    doc = await col.find_one({"_id": "current"})
-    if doc:
-        doc.pop("_id", None)
-        return {**DV_DEFAULTS, **doc}
-    return dict(DV_DEFAULTS)
 
 
 class LogEntry(BaseModel):
@@ -49,17 +31,6 @@ class LogEntry(BaseModel):
         return values
 
 
-class TargetsUpdate(BaseModel):
-    """Payload for partially updating macro targets."""
-
-    model_config = ConfigDict(extra="forbid")
-
-    calories: Optional[float] = Field(default=None, ge=0)
-    protein: Optional[float] = Field(default=None, ge=0)
-    fat: Optional[float] = Field(default=None, ge=0)
-    carbs: Optional[float] = Field(default=None, ge=0)
-
-
 def _serialize(doc: Dict[str, Any]) -> Dict[str, Any]:
     """Convert Mongo document to JSON-serializable dict."""
     result = dict(doc)
@@ -71,81 +42,6 @@ def _serialize(doc: Dict[str, Any]) -> Dict[str, Any]:
         result["timestamp"] = result["timestamp"].isoformat()
     return result
 
-
-@router.get("/targets", dependencies=[Depends(require_api_key)])
-async def get_targets() -> JSONResponse:
-    """Return current macro targets."""
-    try:
-        client = get_mongo_client()
-        db = client.get_database("food")
-        targets = await _get_targets(db)
-        return JSONResponse(content={"targets": targets})
-    except Exception as e:
-        content = format_mongo_error(e)
-        return JSONResponse(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE, content=content
-        )
-
-
-@router.patch("/targets", dependencies=[Depends(require_api_key)])
-async def patch_targets(updates: TargetsUpdate) -> JSONResponse:
-    """Partially update macro targets."""
-    data = updates.model_dump(exclude_none=True)
-    if not data:
-        return JSONResponse(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            content={"error": "No valid fields provided"},
-        )
-    try:
-        client = get_mongo_client()
-        db = client.get_database("food")
-        col = db.get_collection("targets")
-        await col.update_one({"_id": "current"}, {"$set": data}, upsert=True)
-        targets = await _get_targets(db)
-        return JSONResponse(content={"targets": targets})
-    except Exception as e:
-        content = format_mongo_error(e)
-        return JSONResponse(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE, content=content
-        )
-
-
-@router.delete("/targets", dependencies=[Depends(require_api_key)])
-async def delete_targets() -> JSONResponse:
-    """Reset all targets to defaults."""
-    try:
-        client = get_mongo_client()
-        db = client.get_database("food")
-        col = db.get_collection("targets")
-        await col.delete_many({})
-        return JSONResponse(content={"targets": dict(DV_DEFAULTS)})
-    except Exception as e:
-        content = format_mongo_error(e)
-        return JSONResponse(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE, content=content
-        )
-
-
-@router.delete("/targets/{macro}", dependencies=[Depends(require_api_key)])
-async def delete_target_macro(macro: str) -> JSONResponse:
-    """Reset a single macro to its default."""
-    if macro not in DV_DEFAULTS:
-        return JSONResponse(
-            status_code=status.HTTP_404_NOT_FOUND,
-            content={"error": "Unknown macro"},
-        )
-    try:
-        client = get_mongo_client()
-        db = client.get_database("food")
-        col = db.get_collection("targets")
-        await col.update_one({"_id": "current"}, {"$unset": {macro: ""}})
-        targets = await _get_targets(db)
-        return JSONResponse(content={"targets": targets})
-    except Exception as e:
-        content = format_mongo_error(e)
-        return JSONResponse(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE, content=content
-        )
 
 @router.get("/log", dependencies=[Depends(require_api_key)])
 async def get_log(date: Optional[str] = Query(default=None)) -> JSONResponse:
@@ -203,9 +99,8 @@ async def get_log(date: Optional[str] = Query(default=None)) -> JSONResponse:
             content={"entries": entries, "totals": totals, "remaining": remaining}
         )
     except ValueError:
-        return JSONResponse(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            content={"error": "Invalid date format"},
+        return error_response(
+            message="Invalid date format", status_code=status.HTTP_400_BAD_REQUEST
         )
     except HTTPException:
         raise
@@ -229,14 +124,14 @@ async def append_log(entry: LogEntry) -> JSONResponse:
             "timestamp": entry.timestamp or datetime.utcnow(),
         }
         result = await collection.insert_one(doc)
-        return JSONResponse(
-            status_code=status.HTTP_201_CREATED,
+        return success_response(
             content={"log_id": str(result.inserted_id)},
+            message="Log entry created",
+            status_code=status.HTTP_201_CREATED,
         )
     except bson_errors.InvalidId:
-        return JSONResponse(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            content={"error": "Invalid product_id"},
+        return error_response(
+            message="Invalid product_id", status_code=status.HTTP_400_BAD_REQUEST
         )
     except HTTPException:
         raise
@@ -258,17 +153,15 @@ async def delete_log(log_id: str) -> JSONResponse:
         obj_id = ObjectId(log_id)
         doc = await log_col.find_one({"_id": obj_id})
         if not doc:
-            return JSONResponse(
-                status_code=status.HTTP_404_NOT_FOUND,
-                content={"error": "Log entry not found"},
+            return error_response(
+                message="Log entry not found", status_code=status.HTTP_404_NOT_FOUND
             )
         await trash_col.insert_one(doc)
         await log_col.delete_one({"_id": obj_id})
-        return JSONResponse(content={"deleted": True})
+        return success_response(content={"deleted": True}, message="Log entry deleted")
     except bson_errors.InvalidId:
-        return JSONResponse(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            content={"error": "Invalid log_id"},
+        return error_response(
+            message="Invalid log_id", status_code=status.HTTP_400_BAD_REQUEST
         )
     except HTTPException:
         raise
@@ -289,15 +182,19 @@ async def undo_log() -> JSONResponse:
         trash_col = db.get_collection("log_trash")
         doc = await log_col.find_one(sort=[("timestamp", -1)])
         if not doc:
-            return JSONResponse(
+            return error_response(
+                message="No log entries to undo",
                 status_code=status.HTTP_404_NOT_FOUND,
-                content={"error": "No log entries to undo"},
             )
         await trash_col.insert_one(doc)
         await log_col.delete_one({"_id": doc["_id"]})
-        return JSONResponse(content={"deleted_id": str(doc["_id"])} )
+        return success_response(
+            content={"deleted_id": str(doc["_id"])},
+            message="Last log entry undone",
+        )
     except Exception as e:
         content = format_mongo_error(e)
         return JSONResponse(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE, content=content
         )
+

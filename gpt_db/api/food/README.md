@@ -35,7 +35,16 @@ curl -sS -X POST \
 
 ```json
 {
-  "item": { "_id": "64abc...", "upc": "0001", "name": "Apple", "tags": ["fruit"], "ingredients": ["apple"], "nutrition": { "calories": 95, "protein": 0.5, "fat": 0.3, "carbs": 25, "fiber": 4.4 } }
+  "success": true,
+  "message": "Product created",
+  "item": {
+    "_id": "64abc...",
+    "upc": "0001",
+    "name": "Apple",
+    "tags": ["fruit"],
+    "ingredients": ["apple"],
+    "nutrition": { "calories": 95, "protein": 0.5, "fat": 0.3, "carbs": 25, "fiber": 4.4 }
+  }
 }
 ```
 
@@ -94,7 +103,7 @@ curl -sS -X POST \
 ```
 
 ```json
-{ "upserted_uuids": ["550e8400-e29b-41d4-a716-446655440000"] }
+{ "success": true, "message": "Stock updated", "upserted_uuids": ["550e8400-e29b-41d4-a716-446655440000"], "count": 1 }
 ```
 
 ### `POST /food/stock/consume`
@@ -109,7 +118,7 @@ curl -sS -X POST \
 ```
 
 ```json
-{ "remaining": 2 }
+{ "success": true, "message": "Stock consumed", "remaining": 2 }
 ```
 
 ### `POST /food/stock/remove`
@@ -124,7 +133,7 @@ curl -sS -X POST \
 ```
 
 ```json
-{ "remaining": 1 }
+{ "success": true, "message": "Stock removed", "remaining": 1 }
 ```
 
 ### `DELETE /food/stock/{stock_uuid}`
@@ -136,7 +145,7 @@ curl -sS -X DELETE -H "x-api-key: ${API_KEY}" \
 ```
 
 ```json
-{ "deleted": true }
+{ "success": true, "message": "Product deleted", "deleted": true }
 ```
 
 ## Log
@@ -171,7 +180,7 @@ curl -sS -X POST \
 ```
 
 ```json
-{ "log_id": "64log..." }
+{ "success": true, "message": "Log entry created", "log_id": "64log..." }
 ```
 
 ### `DELETE /food/log/{log_id}`
@@ -183,7 +192,7 @@ curl -sS -X DELETE -H "x-api-key: ${API_KEY}" \
 ```
 
 ```json
-{ "deleted": true }
+{ "success": true, "message": "Log entry deleted", "deleted": true }
 ```
 
 ### `POST /food/log/undo`
@@ -195,7 +204,7 @@ curl -sS -X POST -H "x-api-key: ${API_KEY}" \
 ```
 
 ```json
-{ "deleted_id": "64abc..." }
+{ "success": true, "message": "Last log entry undone", "deleted_id": "64abc..." }
 ```
 ## Targets
 
