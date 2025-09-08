@@ -17,6 +17,7 @@ A unified [OpenAPI 3.1 specification](openapi.yaml) consolidates all routes unde
 - `/food/catalog`:
   - `GET` – list products with optional filters (`q`, `upc`, `tag`).
   - `POST` – create or update a product by `upc`; accepts optional `tags`, `ingredients`, and a nested `nutrition` object with macros, vitamins, and minerals per unit. For backward compatibility, top‑level macro fields are accepted and merged into `nutrition`.
+    Note: UPC must be provided as a JSON string of digits (e.g., "070662404072"); numeric values will be rejected to prevent loss of leading zeros.
   - `GET /food/catalog/{product_id}` – retrieve a product.
   - `DELETE /food/catalog/{product_id}` – delete a product (`force=true` to bypass reference checks).
 - `/food/stock`:

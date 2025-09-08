@@ -25,6 +25,8 @@ Create or update a product by `upc`.
 
 Provide per-unit nutrition facts in a nested `nutrition` object. Supported fields include macros (e.g., `calories`, `protein`, `fat`, `carbs`, `fiber`, `sugars`), vitamins (e.g., `vitamin_c_mg`, `vitamin_d_mcg`), and minerals (e.g., `sodium_mg`, `potassium_mg`, `calcium_mg`). Optionally include `tags: string[]` and `ingredients: string[]`. For backward compatibility, top-level macro fields may be provided and will be merged into `nutrition`.
 
+Important: UPC must be a JSON string of digits. Leading zeros are significant and must be preserved. Example: `"070662404072"` (not an unquoted number).
+
 ```bash
 curl -sS -X POST \
   -H "Content-Type: application/json" \

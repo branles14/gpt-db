@@ -147,6 +147,26 @@ class Product(BaseModel):
             self.carbs = None
         return self
 
+    @field_validator("upc", mode="before")
+    @classmethod
+    def _validate_upc(cls, v: Any) -> Optional[str]:
+        """Ensure UPC is a string of digits. Leading zeros are significant.
+
+        - Reject non-string inputs to avoid lossy coercion (e.g., dropping leading zeros).
+        - Trim whitespace and allow empty to become None.
+        - Enforce digits-only when provided.
+        """
+        if v is None:
+            return None
+        if not isinstance(v, str):
+            raise TypeError("UPC must be a string with quotes in JSON (digits only)")
+        s = v.strip()
+        if not s:
+            return None
+        if not s.isdigit():
+            raise ValueError("UPC must contain digits only (0-9)")
+        return s
+
 
 @router.get("/catalog", dependencies=[Depends(require_api_key)])
 async def list_products(

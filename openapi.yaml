@@ -74,7 +74,11 @@ paths:
                   description: Human-readable product name
                 upc:
                   type: string
-                  description: Barcode used for lookups
+                  description: |
+                    Barcode used for lookups. Must be a string of digits; leading zeros are significant
+                    and must be preserved (e.g., "070662404072").
+                  pattern: '^[0-9]+$'
+                  example: "070662404072"
                 tags:
                   type: array
                   items:
