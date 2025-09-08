@@ -439,6 +439,52 @@ paths:
       responses:
         '200':
           description: Log entry undone
+  /food/targets:
+    get:
+      summary: Get macro targets
+      operationId: getFoodTargets
+      tags:
+        - food
+      responses:
+        '200':
+          description: Current targets
+    patch:
+      summary: Update macro targets
+      operationId: patchFoodTargets
+      tags:
+        - food
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Targets updated
+    delete:
+      summary: Reset all macro targets
+      operationId: deleteFoodTargets
+      tags:
+        - food
+      responses:
+        '200':
+          description: Targets reset
+  /food/targets/{macro}:
+    delete:
+      summary: Reset one macro target
+      operationId: deleteFoodTargetsMacro
+      tags:
+        - food
+      parameters:
+        - in: path
+          name: macro
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Target reset
 components:
   securitySchemes:
     ApiKeyAuth:

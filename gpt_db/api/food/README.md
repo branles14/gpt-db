@@ -197,6 +197,51 @@ curl -sS -X POST -H "x-api-key: ${API_KEY}" \
 ```json
 { "deleted_id": "64abc..." }
 ```
+## Targets
+
+### `GET /food/targets`
+Retrieve current macro targets, falling back to standard Daily Values.
+
+```bash
+curl -sS -H "x-api-key: ${API_KEY}" \
+  https://<host>/food/targets
+```
+
+```json
+{ "targets": { "calories": 2000, "protein": 50, "fat": 78, "carbs": 275 } }
+```
+
+### `PATCH /food/targets`
+Update one or more targets.
+
+```bash
+curl -sS -X PATCH \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: ${API_KEY}" \
+  -d '{"protein":60}' \
+  https://<host>/food/targets
+```
+
+```json
+{ "targets": { "calories": 2000, "protein": 60, "fat": 78, "carbs": 275 } }
+```
+
+### `DELETE /food/targets`
+Reset all targets to defaults.
+
+```bash
+curl -sS -X DELETE -H "x-api-key: ${API_KEY}" \
+  https://<host>/food/targets
+```
+
+### `DELETE /food/targets/{macro}`
+Reset a specific macro to its default.
+
+```bash
+curl -sS -X DELETE -H "x-api-key: ${API_KEY}" \
+  https://<host>/food/targets/protein
+```
+
 Add and sync details into catalog:
 
 ```bash
