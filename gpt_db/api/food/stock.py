@@ -33,6 +33,21 @@ class StockItem(BaseModel):
     ingredients: Optional[List[str]] = Field(default=None, min_length=1)
     nutrition: Optional[NutritionFacts] = None
 
+    @field_validator("upc", mode="before")
+    @classmethod
+    def _validate_upc(cls, v: Any) -> str:
+        """Ensure UPC is a quoted string of digits.
+
+        This mirrors catalog validation so that items seeded via stock never
+        create catalog rows with malformed UPCs (e.g., numbers that drop leading
+        zeros, spaces, or hyphens)."""
+        if not isinstance(v, str):
+            raise TypeError("UPC must be a string with quotes in JSON (digits only)")
+        s = v.strip()
+        if not s or not s.isdigit():
+            raise ValueError("UPC must contain digits only (0-9)")
+        return s
+
     @field_validator("tags", "ingredients", mode="before")
     @classmethod
     def _normalize_string_list(cls, v: Any) -> Optional[List[str]]:

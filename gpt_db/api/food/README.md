@@ -96,6 +96,9 @@ optional fields to seed or update the catalog entry: `name`, `tags`,
 `ingredients`, and `nutrition` (or top-level macros like `calories`,
 `protein`, `fat`, `carbs`).
 
+UPC requirements: the `upc` field must be a quoted string containing digits only
+to avoid losing leading zeros and to keep catalog and stock in sync.
+
 ```bash
 curl -sS -X POST \
   -H "Content-Type: application/json" \
