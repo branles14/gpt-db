@@ -5,7 +5,9 @@ All routes require the `x-api-key` header.
 ## Catalog
 
 ### `GET /food/catalog`
-List products with optional filters (`q`, `upc`, `tag`).
+List products with optional filters (`q`, `upc`, `tag`). The `q` parameter performs a
+case-insensitive search across `name`, `upc`, `tags`, and `ingredients`. `tag`
+matches against the `tags` array case-insensitively, and `upc` matches exactly.
 
 ```bash
 curl -sS -H "x-api-key: ${API_KEY}" \

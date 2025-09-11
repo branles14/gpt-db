@@ -1,4 +1,5 @@
 from typing import Any, Dict, List, Optional
+import re
 
 from fastapi import APIRouter, Depends, Query, status, HTTPException
 from fastapi.responses import JSONResponse
@@ -174,17 +175,45 @@ async def list_products(
     upc: Optional[str] = Query(default=None),
     tag: Optional[str] = Query(default=None),
 ) -> JSONResponse:
-    """List products with optional filters."""
+    """List products with optional filters.
+
+    Behavior:
+    - `q` performs a case-insensitive search across `name`, `upc`, `tags`, and
+      `ingredients`. The query string is escaped to avoid invalid regex input.
+    - `upc` matches exact UPC.
+    - `tag` matches case-insensitively within the `tags` array.
+    """
     try:
         client = get_mongo_client()
         collection = client.get_database("food").get_collection("catalog")
-        filters: Dict[str, Any] = {}
-        if q:
-            filters["name"] = {"$regex": q, "$options": "i"}
+
+        clauses: List[Dict[str, Any]] = []
+
         if upc:
-            filters["upc"] = upc
+            clauses.append({"upc": upc})
+
         if tag:
-            filters["tags"] = tag
+            pattern = re.escape(tag)
+            clauses.append({"tags": {"$elemMatch": {"$regex": pattern, "$options": "i"}}})
+
+        if q:
+            pattern = re.escape(q)
+            or_clauses = [
+                {"name": {"$regex": pattern, "$options": "i"}},
+                {"upc": {"$regex": pattern, "$options": "i"}},
+                {"tags": {"$elemMatch": {"$regex": pattern, "$options": "i"}}},
+                {"ingredients": {"$elemMatch": {"$regex": pattern, "$options": "i"}}},
+            ]
+            clauses.append({"$or": or_clauses})
+
+        filters: Dict[str, Any]
+        if not clauses:
+            filters = {}
+        elif len(clauses) == 1:
+            filters = clauses[0]
+        else:
+            filters = {"$and": clauses}
+
         cursor = collection.find(filters)
         items = [_serialize(doc) async for doc in cursor]
         return JSONResponse(content={"items": items})
