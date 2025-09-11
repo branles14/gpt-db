@@ -41,3 +41,26 @@ def close_mongo_client() -> None:
         except Exception:
             pass
     _clients_by_loop.clear()
+
+
+async def ensure_indexes() -> None:
+    """Create commonly-used indexes if they don't exist.
+
+    Best-effort: failures are silently ignored so startup does not fail on
+    clusters without createIndex privileges.
+    """
+    try:
+        client = get_mongo_client()
+        db = client.get_database("food")
+        # Catalog: unique UPC when present
+        await db.get_collection("catalog").create_index(
+            "upc", name="uniq_upc", unique=True, sparse=True
+        )
+        # Stock: quick lookups by upc/uuid
+        await db.get_collection("stock").create_index("upc")
+        await db.get_collection("stock").create_index("uuid")
+        # Log: sort/range by timestamp
+        await db.get_collection("log").create_index("timestamp")
+    except Exception:
+        # Non-fatal — continue without enforcing indexes
+        pass

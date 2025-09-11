@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, Query, status, HTTPException
 from fastapi.responses import JSONResponse
 from bson import ObjectId, errors as bson_errors
 from pydantic import BaseModel, Field, model_validator, field_validator
+from pymongo.errors import DuplicateKeyError
 from pydantic.config import ConfigDict
 
 from gpt_db.api.deps import require_api_key
@@ -219,6 +220,12 @@ async def list_products(
         return JSONResponse(content={"items": items})
     except HTTPException:
         raise
+    except DuplicateKeyError:
+        # Unique UPC constraint violated
+        return error_response(
+            message="Product with this UPC already exists",
+            status_code=status.HTTP_409_CONFLICT,
+        )
     except Exception as e:
         content = format_mongo_error(e)
         return JSONResponse(
@@ -294,6 +301,11 @@ async def get_product(product_id: str) -> JSONResponse:
         )
     except HTTPException:
         raise
+    except DuplicateKeyError:
+        return error_response(
+            message="Product with this UPC already exists",
+            status_code=status.HTTP_409_CONFLICT,
+        )
     except Exception as e:
         content = format_mongo_error(e)
         return JSONResponse(
