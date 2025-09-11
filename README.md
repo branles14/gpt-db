@@ -22,7 +22,8 @@ A unified [OpenAPI 3.1 specification](openapi.yaml) consolidates all routes unde
   - `DELETE /food/catalog/{product_id}` – delete a product (`force=true` to bypass reference checks).
 - `/food/stock`:
   - `GET` – list stock with `view=aggregate|items`.
-  - `POST` – add units via `{ upc, quantity }`. Optional fields (`name`, `tags`, `ingredients`, `nutrition`) seed or update the catalog.
+- `POST` – add units via `{ upc, quantity }`. Optional fields (`name`, `tags`, `ingredients`, `nutrition`) seed or update the catalog.
+  Note: `upc` must be a JSON string of digits (e.g., `"070662404072"`). Numbers or strings containing spaces/hyphens are rejected to preserve leading zeros and ensure consistent lookups.
   - `POST /food/stock/consume` – atomic decrement with log.
   - `POST /food/stock/remove` – decrement with a `reason` (no nutrition log).
   - `DELETE /food/stock/{stock_uuid}` – remove a specific stock row.
@@ -257,6 +258,17 @@ python tests/simulate-use.py list --api-key ${API_KEY} --api-url http://localhos
   - The app uses MongoDB Stable API v1 via Motor/PyMongo, matching the sample ping script.
   - If `MONGO_URI` is missing, endpoints now return HTTP 500 with
     `Server not configured: set MONGO_URI` instead of a generic 503.
+
+- Catalog add “doesn’t stick” or a tool claims success but the item isn’t listed:
+  - Verify the request actually hit `POST /food/catalog` with a `201 Created` or `200 OK` response.
+  - Ensure `x-api-key` is included; read endpoints will also require it, but double‑check the write.
+  - Check that UPC is a quoted string of digits. Example valid payload snippet:
+    ```json
+    {"upc":"070662404072","name":"Example","nutrition":{"calories":100}}
+    ```
+    Invalid examples: `{ "upc": 70662404072 }`, `{ "upc": "07066-2404072" }`.
+  - If you post empty arrays for `tags` or `ingredients`, validation fails. Omit the fields instead.
+  - To manually verify end‑to‑end, use the CLI: `python tests/simulate-use.py food catalog upsert '@payload.json'` then `python tests/simulate-use.py food catalog list`.
 
 Commands mirror the API structure. JSON payloads may be passed directly or
 from a file by prefixing the path with `@`.
