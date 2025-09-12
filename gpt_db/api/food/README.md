@@ -52,6 +52,11 @@ curl -sS -X POST \
 }
 ```
 
+Semantics and workflow:
+- Upsert by `upc` uses `$set`, so subsequent calls with the same `upc` enrich the same document (e.g., first `upc+name`, later `upc+nutrition` → the product has both name and nutrition).
+- When `nutrition` is sent via this endpoint it replaces the entire nutrition object; use `POST /food/stock` to merge individual nutrition keys and union `tags`/`ingredients`.
+- Duplicate UPCs: the database enforces a unique sparse index on `upc`. A true duplicate insert (or a rare race) can return `409 Conflict`. Normal upsert-by-UPC updates return `200 OK`.
+
 ### `GET /food/catalog/{product_id}`
 Retrieve a product.
 

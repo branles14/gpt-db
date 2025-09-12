@@ -30,6 +30,12 @@ A unified [OpenAPI 3.1 specification](openapi.yaml) consolidates all routes unde
     Note: UPC must be provided as a JSON string of digits (e.g., "070662404072"); numeric values will be rejected to prevent loss of leading zeros.
   - `GET /food/catalog/{product_id}` – retrieve a product.
   - `DELETE /food/catalog/{product_id}` – delete a product (`force=true` to bypass reference checks).
+
+  Catalog upsert semantics:
+  - POST with `upc` performs an upsert using `$set`: fields you provide are added/updated on the existing doc; others remain unchanged.
+  - If the doc is created: returns `201 Created`; if it existed and was updated: returns `200 OK`.
+  - `nutrition` sent via catalog replaces the entire nutrition object (not a key-wise merge). To incrementally add nutrition keys, you can also use `POST /food/stock`, which merges nutrition keys and unions `tags`/`ingredients`.
+  - Duplicate UPC handling: a unique sparse index prevents two different documents from sharing the same `upc`. A true duplicate insert (or rare race) can surface `409 Conflict`. Normal upsert-by-UPC updates do not return 409.
 - `/food/stock`:
   - `GET` – list stock with `view=aggregate|items`.
 - `POST` – add units via `{ upc, quantity }`. Optional fields (`name`, `tags`, `ingredients`, `nutrition`) seed or update the catalog.
@@ -177,6 +183,20 @@ curl -sS \
   -H "x-api-key: ${API_KEY}" \
   "http://localhost:${PORT:-8000}/food/stock?view=aggregate"
 # -> {"items": [...]}  # aggregated quantities
+```
+
+- Enrich an existing product later (same UPC):
+
+```bash
+curl -sS -X POST \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: ${API_KEY}" \
+  -d '{
+        "upc": "0001",
+        "nutrition": {"calories": 95, "protein": 0.5, "fat": 0.3, "carbs": 25}
+      }' \
+  http://localhost:${PORT:-8000}/food/catalog
+# -> {"success": true, "message": "Product updated", ...}
 ```
 
 - Add to food stock (requires API key):
