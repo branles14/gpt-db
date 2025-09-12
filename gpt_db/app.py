@@ -4,7 +4,7 @@ from fastapi.responses import JSONResponse
 
 from gpt_db.api.deps import require_api_key
 from gpt_db.api.routes import router
-from gpt_db.db.mongo import close_mongo_client, get_mongo_client
+from gpt_db.db.mongo import close_mongo_client, get_mongo_client, ensure_indexes
 
 
 def create_app() -> FastAPI:
@@ -20,6 +20,8 @@ def create_app() -> FastAPI:
     async def startup_event() -> None:
         """Initialize resources on startup."""
         get_mongo_client()
+        # Best-effort index creation; failures are non-fatal
+        await ensure_indexes()
 
     @application.on_event("shutdown")
     async def shutdown_event() -> None:
@@ -44,4 +46,3 @@ def create_app() -> FastAPI:
 
 
 app = create_app()
-
