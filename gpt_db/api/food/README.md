@@ -218,6 +218,33 @@ curl -sS -X POST -H "x-api-key: ${API_KEY}" \
 ```json
 { "success": true, "message": "Last log entry undone", "deleted_id": "64abc..." }
 ```
+
+### `GET /food/log/stats`
+Aggregate per-day macro totals over a date range.
+
+Query params:
+- `start`: YYYY-MM-DD (inclusive)
+- `end`: YYYY-MM-DD (inclusive)
+- `tz`: timezone offset like `Z`, `+00:00`, `-08` (optional; default UTC)
+
+```bash
+curl -sS -H "x-api-key: ${API_KEY}" \
+  "https://<host>/food/log/stats?start=2025-09-01&end=2025-09-10&tz=-07:00"
+```
+
+```json
+{
+  "days": [
+    { "date": "2025-09-01", "totals": { "calories": 1850, "protein": 120, "fat": 60, "carbs": 210 } },
+    { "date": "2025-09-02", "totals": { "calories": 2050, "protein": 95,  "fat": 70, "carbs": 240 } }
+  ],
+  "overall": { "calories": 3900, "protein": 215, "fat": 130, "carbs": 450 }
+}
+```
+
+Notes:
+- Grouping is performed in the requested timezone. Logs are stored in UTC.
+- Per-entry nutrition is derived from the current catalog record, matching `GET /food/log`.
 ## Targets
 
 ### `GET /food/targets`
@@ -277,3 +304,7 @@ Behavior:
 - If UPC not found in catalog, a new catalog item is created with provided details.
 - If UPC exists, new values are merged (lists are unioned; nutrition fields are merged).
 - Stock documents store a snapshot of catalog fields but have their own `_id`.
+
+Recommended pattern for GPT/assistants:
+- Add via stock: prefer `POST /food/stock` with full details on first add. This seeds the catalog automatically.
+- On later lookups, the assistant can rely on the catalog and stock endpoints; it does not need to call `POST /food/catalog` directly.

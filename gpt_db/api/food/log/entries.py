@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 
 from bson import ObjectId, errors as bson_errors
@@ -111,6 +111,133 @@ async def get_log(date: Optional[str] = Query(default=None)) -> JSONResponse:
         )
 
 
+def _parse_tz_offset(tz: Optional[str]) -> int:
+    """Parse a timezone offset string and return minutes offset from UTC.
+
+    Accepts values like "Z", "UTC", "+HH", "+HH:MM", "-HH", "-HHMM".
+    Defaults to 0 (UTC) for None or unrecognized inputs.
+    """
+    if not tz:
+        return 0
+    tz = tz.strip().upper()
+    if tz in {"Z", "UTC", "+0", "+00", "+00:00", "+0000", "-0", "-00", "-00:00", "-0000"}:
+        return 0
+    sign = 1
+    if tz.startswith("+"):
+        sign = 1
+        tz = tz[1:]
+    elif tz.startswith("-"):
+        sign = -1
+        tz = tz[1:]
+    # Accept HH[:MM] or HHMM
+    try:
+        if ":" in tz:
+            hours_str, minutes_str = tz.split(":", 1)
+        elif len(tz) > 2:
+            hours_str, minutes_str = tz[:2], tz[2:]
+        else:
+            hours_str, minutes_str = tz, "0"
+        hours = int(hours_str or 0)
+        minutes = int(minutes_str or 0)
+        total = sign * (hours * 60 + minutes)
+        # clamp to plausible range
+        if total < -14 * 60 or total > 14 * 60:
+            return 0
+        return total
+    except Exception:
+        return 0
+
+
+@router.get("/log/stats", dependencies=[Depends(require_api_key)])
+async def get_log_stats(
+    start: str = Query(..., description="Start date YYYY-MM-DD (inclusive)"),
+    end: str = Query(..., description="End date YYYY-MM-DD (inclusive)"),
+    tz: Optional[str] = Query(default=None, description="Timezone offset like +00:00, -08, Z"),
+) -> JSONResponse:
+    """Return per-day macro totals in a date range.
+
+    - Dates are interpreted in the provided timezone (default UTC).
+    - Results are grouped by local date and include an overall sum.
+    """
+    try:
+        # Parse dates
+        start_date = datetime.strptime(start, "%Y-%m-%d").date()
+        end_date = datetime.strptime(end, "%Y-%m-%d").date()
+        if end_date < start_date:
+            return error_response(
+                message="end must be on/after start",
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
+
+        offset_min = _parse_tz_offset(tz)
+        offset = timedelta(minutes=offset_min)
+
+        # Convert local [start 00:00, end+1 00:00) to UTC instants
+        start_local = datetime.combine(start_date, datetime.min.time()).replace(tzinfo=timezone.utc)
+        end_local_next = datetime.combine(end_date + timedelta(days=1), datetime.min.time()).replace(tzinfo=timezone.utc)
+        # Local to UTC: subtract offset
+        start_utc = (start_local - offset).replace(tzinfo=None)
+        end_utc = (end_local_next - offset).replace(tzinfo=None)
+
+        client = get_mongo_client()
+        db = client.get_database("food")
+        log_col = db.get_collection("log")
+        catalog_col = db.get_collection("catalog")
+
+        cursor = (
+            log_col.find({"timestamp": {"$gte": start_utc, "$lt": end_utc}})
+            .sort("timestamp")
+        )
+        docs = [doc async for doc in cursor]
+
+        # day_totals keyed by YYYY-MM-DD
+        day_totals: Dict[str, Dict[str, float]] = {}
+        overall = {k: 0.0 for k in ("calories", "protein", "fat", "carbs")}
+
+        for doc in docs:
+            product = None
+            if doc.get("product_id"):
+                product = await catalog_col.find_one({"_id": doc["product_id"]})
+            elif doc.get("upc"):
+                product = await catalog_col.find_one({"upc": doc["upc"]})
+            units = doc.get("units", 1)
+            nutrition = (product.get("nutrition") if product else None) or {}
+            cals = (nutrition.get("calories") or (product.get("calories") if product else 0) or 0) * units
+            prot = (nutrition.get("protein") or (product.get("protein") if product else 0) or 0) * units
+            fat = (nutrition.get("fat") or (product.get("fat") if product else 0) or 0) * units
+            carbs = (nutrition.get("carbs") or (product.get("carbs") if product else 0) or 0) * units
+
+            # Local-date bucket
+            ts = doc.get("timestamp") or datetime.utcnow()
+            local_date = (ts + offset).date().isoformat()
+            bucket = day_totals.setdefault(local_date, {"calories": 0.0, "protein": 0.0, "fat": 0.0, "carbs": 0.0})
+            bucket["calories"] += cals
+            bucket["protein"] += prot
+            bucket["fat"] += fat
+            bucket["carbs"] += carbs
+
+            overall["calories"] += cals
+            overall["protein"] += prot
+            overall["fat"] += fat
+            overall["carbs"] += carbs
+
+        days = [
+            {"date": d, "totals": {k: round(v, 4) for k, v in t.items()}}
+            for d, t in sorted(day_totals.items())
+        ]
+        return JSONResponse(content={"days": days, "overall": {k: round(v, 4) for k, v in overall.items()}})
+    except ValueError:
+        return error_response(
+            message="Invalid date format", status_code=status.HTTP_400_BAD_REQUEST
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        content = format_mongo_error(e)
+        return JSONResponse(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE, content=content
+        )
+
 @router.post("/log", dependencies=[Depends(require_api_key)])
 async def append_log(entry: LogEntry) -> JSONResponse:
     """Append a log entry manually."""
@@ -197,4 +324,3 @@ async def undo_log() -> JSONResponse:
         return JSONResponse(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE, content=content
         )
-
