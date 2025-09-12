@@ -48,6 +48,7 @@ A unified [OpenAPI 3.1 specification](openapi.yaml) consolidates all routes unde
   - `POST` – append a log entry manually.
   - `DELETE /food/log/{log_id}` – soft delete a log entry.
   - `POST /food/log/undo` – undo the most recent entry.
+  - `GET /food/log/stats` – per‑day totals over a date range (`start`, `end`, optional `tz`).
 - `/food/targets`:
   - `GET` – current macro targets (defaults to FDA Daily Values).
   - `PATCH` – update one or more targets.
@@ -266,6 +267,15 @@ curl -sS \
 # -> {"entries": [...], "totals": {...}, "remaining": {...}}
 ```
 
+- Aggregate day totals across a range:
+
+```bash
+curl -sS \
+  -H "x-api-key: ${API_KEY}" \
+  "http://localhost:${PORT:-8000}/food/log/stats?start=2025-09-01&end=2025-09-10&tz=-07:00"
+# -> {"days": [...], "overall": {...}}
+```
+
 - Append to the food log manually:
 
 ```bash
@@ -295,6 +305,8 @@ helper script is provided:
 python tests/simulate-use.py --help
 python tests/simulate-use.py root
 python tests/simulate-use.py list --api-key ${API_KEY} --api-url http://localhost:${PORT:-8000}
+# Stats helper:
+python tests/simulate-use.py food log stats --start 2025-09-01 --end 2025-09-10 --tz -07:00
 ```
 
 ## Deployment (Vercel)
@@ -323,6 +335,11 @@ python tests/simulate-use.py list --api-key ${API_KEY} --api-url http://localhos
     Invalid examples: `{ "upc": 70662404072 }`, `{ "upc": "07066-2404072" }`.
   - If you post empty arrays for `tags` or `ingredients`, validation fails. Omit the fields instead.
   - To manually verify end‑to‑end, use the CLI: `python tests/simulate-use.py food catalog upsert '@payload.json'` then `python tests/simulate-use.py food catalog list`.
+
+## Guidance for assistants (GPT)
+
+- Prefer adding items via `POST /food/stock`. When full details are provided the first time (name, tags, ingredients, nutrition), the API seeds/updates the catalog automatically.
+- Avoid calling `POST /food/catalog` directly from assistants; treat it as an administrative endpoint. For lookups, rely on `GET /food/catalog` and `GET /food/stock`.
 
 Commands mirror the API structure. JSON payloads may be passed directly or
 from a file by prefixing the path with `@`.

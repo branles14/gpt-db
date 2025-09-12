@@ -224,5 +224,18 @@ def log_undo(client: APIClient) -> None:
     client.request("POST", "/food/log/undo")
 
 
+@log.command("stats")
+@click.option("--start", required=True, help="Start date YYYY-MM-DD (inclusive)")
+@click.option("--end", required=True, help="End date YYYY-MM-DD (inclusive)")
+@click.option("--tz", default=None, help="Timezone offset like +00:00, -08, Z")
+@click.pass_obj
+def log_stats(client: APIClient, start: str, end: str, tz: Optional[str]) -> None:
+    """Get per-day macro totals for a date range."""
+    params = {"start": start, "end": end}
+    if tz:
+        params["tz"] = tz
+    client.request("GET", "/food/log/stats", params=params)
+
+
 if __name__ == "__main__":
     cli()
