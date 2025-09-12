@@ -18,7 +18,15 @@ A unified [OpenAPI 3.1 specification](openapi.yaml) consolidates all routes unde
   - `GET` – list products with optional filters (`q`, `upc`, `tag`). `q` searches
     across `name`, `upc`, `tags`, and `ingredients` (case-insensitive). `upc`
     matches exactly; `tag` matches within the `tags` array case-insensitively.
-  - `POST` – create or update a product by `upc`; accepts optional `tags`, `ingredients`, and a nested `nutrition` object with macros, vitamins, and minerals per unit. For backward compatibility, top‑level macro fields are accepted and merged into `nutrition`.
+  - `POST` – create or update a product by `upc`.
+    - Create: if no existing item with the provided `upc` is found, requires `name`.
+    - Update: if an item with the provided `upc` exists, performs a partial merge:
+      only the fields you include are modified; other fields remain unchanged.
+      To clear a field, send it explicitly as `null`.
+    - Accepts optional `tags`, `ingredients`, and a nested `nutrition` object with
+      macros, vitamins, and minerals per unit. For backward compatibility,
+      top‑level macro fields (`calories`, `protein`, `fat`, `carbs`) are accepted
+      and merged into `nutrition`.
     Note: UPC must be provided as a JSON string of digits (e.g., "070662404072"); numeric values will be rejected to prevent loss of leading zeros.
   - `GET /food/catalog/{product_id}` – retrieve a product.
   - `DELETE /food/catalog/{product_id}` – delete a product (`force=true` to bypass reference checks).
@@ -136,6 +144,30 @@ curl -sS -X POST \
       }' \
   http://localhost:${PORT:-8000}/food/catalog
 # -> {"success": true, "message": "Product created", "item": {"_id": "...", "upc": "0001", "name": "Apple", "tags": ["fruit"], "ingredients": ["apple"], "nutrition": {"calories":95,"protein":0.5,"fat":0.3,"carbs":25,"fiber":4.4,"vitamin_c_mg":8.4,"potassium_mg":195}}}
+```
+
+- Partially update an existing product by UPC (merge update):
+
+```bash
+curl -sS -X POST \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: ${API_KEY}" \
+  -d '{
+        "upc": "0001",
+        "nutrition": { "calories": 100 }
+      }' \
+  http://localhost:${PORT:-8000}/food/catalog
+# -> {"success": true, "message": "Product updated", "item": { ... "nutrition": { ... "calories": 100, ... } }}
+
+# Clear a field by sending null (example: remove calories):
+curl -sS -X POST \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: ${API_KEY}" \
+  -d '{
+        "upc": "0001",
+        "nutrition": { "calories": null }
+      }' \
+  http://localhost:${PORT:-8000}/food/catalog
 ```
 
 - Read food stock (requires API key):

@@ -72,12 +72,13 @@ class NutritionFacts(BaseModel):
     vitamin_b12_mcg: Optional[float] = Field(default=None, ge=0)
 
 
-class Product(BaseModel):
-    """Product payload for catalog upsert."""
+class ProductBase(BaseModel):
+    """Shared fields and validators for product models."""
 
     model_config = ConfigDict(extra="allow")
 
-    name: str
+    # Common fields (optional by default; creation model will require name)
+    name: Optional[str] = None
     upc: Optional[str] = None
     tags: Optional[List[str]] = Field(default=None, min_length=1)
     ingredients: Optional[List[str]] = Field(default=None, min_length=1)
@@ -125,7 +126,7 @@ class Product(BaseModel):
         return result or None
 
     @model_validator(mode="after")
-    def _merge_top_level_macros(self) -> "Product":
+    def _merge_top_level_macros(self) -> "ProductBase":
         """Move any provided top-level macros into the nutrition object."""
         # If nothing provided, skip
         provided = {
@@ -168,6 +169,24 @@ class Product(BaseModel):
         if not s.isdigit():
             raise ValueError("UPC must contain digits only (0-9)")
         return s
+
+
+class ProductCreate(ProductBase):
+    """Product payload for creation/upsert when creating a new record.
+
+    Requires `name`. `upc` is optional but recommended.
+    """
+
+    name: str  # override to required
+
+
+class ProductUpdate(ProductBase):
+    """Product payload for partial update.
+
+    All fields optional; omitted fields are left unchanged. Explicit `null`
+    clears the field.
+    """
+    pass
 
 
 @router.get("/catalog", dependencies=[Depends(require_api_key)])
@@ -233,45 +252,143 @@ async def list_products(
         )
 
 
+def _flatten_for_update(
+    data: Dict[str, Any],
+    parent: str = "",
+) -> tuple[Dict[str, Any], Dict[str, str]]:
+    """Flatten a nested dict into Mongo `$set` and `$unset` ops.
+
+    - Dicts are flattened into dotted paths for `$set`.
+    - Lists/primitives are set as-is.
+    - `None` values generate `$unset` entries (value is "").
+    """
+    set_ops: Dict[str, Any] = {}
+    unset_ops: Dict[str, str] = {}
+
+    for key, value in data.items():
+        if key == "_id":
+            continue
+        path = f"{parent}.{key}" if parent else key
+        if value is None:
+            unset_ops[path] = ""
+        elif isinstance(value, dict):
+            # If dict is empty after excluding None-only entries, it becomes an unset
+            sub_set, sub_unset = _flatten_for_update(value, path)
+            set_ops.update(sub_set)
+            unset_ops.update(sub_unset)
+            # If dict had only unsets and no sets, do nothing more; Mongo will
+            # remove subfields via $unset paths
+        else:
+            set_ops[path] = value
+
+    return set_ops, unset_ops
+
+
 @router.post("/catalog", dependencies=[Depends(require_api_key)])
-async def upsert_product(product: Product) -> JSONResponse:
-    """Create or update a product by UPC."""
+async def upsert_product(payload: Dict[str, Any]) -> JSONResponse:
+    """Create or update a product.
+
+    Behavior
+    - If `upc` is provided and an item exists: perform a partial merge update.
+      Only provided fields are changed; sending `null` explicitly clears a field.
+    - Otherwise: create a new product (requires `name`).
+    """
     try:
         client = get_mongo_client()
         collection = client.get_database("food").get_collection("catalog")
-        # Dump with deprecated top-level macros removed (merged into nutrition)
-        payload = product.model_dump(exclude_none=True)
-        if "upc" in payload:
-            result = await collection.update_one(
-                {"upc": payload["upc"]}, {"$set": payload}, upsert=True
-            )
-            doc = await collection.find_one({"upc": payload["upc"]})
-            if not result.acknowledged or not doc:
-                return error_response(
-                    message="Failed to persist product",
-                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        upc = payload.get("upc")
+
+        if upc:
+            # Does a product with this UPC already exist?
+            existing = await collection.find_one({"upc": upc})
+            if existing:
+                # Validate as partial update (also merges top-level macros)
+                parsed = ProductUpdate(**payload)
+
+                # Build a normalized dict containing ONLY keys the client provided.
+                normalized: Dict[str, Any] = {}
+                provided_keys = set(payload.keys())
+
+                # Handle known fields via parsed model to apply normalization
+                if "name" in provided_keys:
+                    normalized["name"] = parsed.name
+                if "upc" in provided_keys:
+                    normalized["upc"] = parsed.upc
+                if "tags" in provided_keys:
+                    normalized["tags"] = parsed.tags
+                if "ingredients" in provided_keys:
+                    normalized["ingredients"] = parsed.ingredients
+
+                # Handle nutrition and top-level macro aliases
+                macros = {k for k in ("calories", "protein", "fat", "carbs") if k in provided_keys}
+                if "nutrition" in provided_keys:
+                    # Explicitly provided; if null, we clear nutrition entirely
+                    if payload.get("nutrition") is None:
+                        normalized["nutrition"] = None
+                    else:
+                        normalized["nutrition"] = (
+                            parsed.nutrition.model_dump(exclude_none=True) if parsed.nutrition else {}
+                        )
+                if macros:
+                    # Start from parsed nutrition (if not explicitly cleared above)
+                    if normalized.get("nutrition") is None and "nutrition" in provided_keys:
+                        # Nutrition explicitly cleared; macros are ignored in favor of full clear
+                        pass
+                    else:
+                        base_nutrition = (
+                            parsed.nutrition.model_dump(exclude_none=True) if parsed.nutrition else {}
+                        )
+                        for m in macros:
+                            base_nutrition[m] = payload.get(m)
+                        normalized["nutrition"] = base_nutrition
+
+                # Preserve any other extra fields exactly as provided
+                known = {"name", "upc", "tags", "ingredients", "nutrition", "calories", "protein", "fat", "carbs"}
+                for k in provided_keys - known:
+                    normalized[k] = payload[k]
+
+                # Build $set/$unset from provided fields only
+                set_ops, unset_ops = _flatten_for_update(normalized)
+                # If no effective changes, return current doc
+                if not set_ops and not unset_ops:
+                    return success_response(
+                        content={"item": _serialize(existing)},
+                        message="Product updated",
+                        status_code=status.HTTP_200_OK,
+                    )
+                update_doc: Dict[str, Any] = {}
+                if set_ops:
+                    update_doc["$set"] = set_ops
+                if unset_ops:
+                    update_doc["$unset"] = unset_ops
+
+                result = await collection.update_one({"upc": upc}, update_doc)
+                doc = await collection.find_one({"upc": upc})
+                if not result.acknowledged or not doc:
+                    return error_response(
+                        message="Failed to persist product",
+                        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    )
+                return success_response(
+                    content={"item": _serialize(doc)},
+                    message="Product updated",
+                    status_code=status.HTTP_200_OK,
                 )
-            created = result.upserted_id is not None
-            return success_response(
-                content={"item": _serialize(doc)},
-                message="Product created" if created else "Product updated",
-                status_code=(
-                    status.HTTP_201_CREATED if created else status.HTTP_200_OK
-                ),
+
+        # Create path: validate with creation model (requires name)
+        data = ProductCreate(**payload).model_dump(exclude_none=True)
+        result = await collection.insert_one(data)
+        doc = await collection.find_one({"_id": result.inserted_id})
+        if not result.acknowledged or not doc:
+            return error_response(
+                message="Failed to persist product",
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             )
-        else:
-            result = await collection.insert_one(payload)
-            doc = await collection.find_one({"_id": result.inserted_id})
-            if not result.acknowledged or not doc:
-                return error_response(
-                    message="Failed to persist product",
-                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                )
-            return success_response(
-                content={"item": _serialize(doc)},
-                message="Product created",
-                status_code=status.HTTP_201_CREATED,
-            )
+        return success_response(
+            content={"item": _serialize(doc)},
+            message="Product created",
+            status_code=status.HTTP_201_CREATED,
+        )
     except HTTPException:
         raise
     except Exception as e:
