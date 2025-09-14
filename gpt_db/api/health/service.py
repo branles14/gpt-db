@@ -11,8 +11,11 @@ async def mongo_status() -> dict[str, str]:
     On error, a ``detail`` field describes the exception.
     """
     client: AsyncIOMotorClient | None = None
+    uri = get_mongo_uri()
+    if uri is None:
+        return {"status": "error", "detail": "MONGO_URI not configured"}
     try:
-        client = AsyncIOMotorClient(get_mongo_uri(), server_api=ServerApi("1"))
+        client = AsyncIOMotorClient(uri, server_api=ServerApi("1"))
         await client.admin.command("ping")
         return {"status": "ok"}
     except Exception as e:
