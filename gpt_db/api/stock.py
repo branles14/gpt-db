@@ -28,7 +28,7 @@ class StockItem(BaseModel):
     model_config = ConfigDict(extra="allow")
 
     upc: str = Field(min_length=1)
-    quantity: int
+    quantity: int = Field(gt=0)
     # Optional enrichment fields that may also update catalog
     name: Optional[str] = None
     tags: Optional[List[str]] = Field(default=None, min_length=1)
@@ -86,7 +86,7 @@ class ConsumeItem(BaseModel):
     """Payload for consuming or removing stock (UPC-only)."""
 
     upc: str = Field(min_length=1)
-    units: int = 1
+    units: int = Field(default=1, gt=0)
     reason: Optional[str] = None
 
 
