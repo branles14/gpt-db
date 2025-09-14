@@ -7,10 +7,10 @@ from pydantic.config import ConfigDict
 from gpt_db.api.deps import require_api_key
 from gpt_db.api.utils import format_mongo_error
 from gpt_db.db.mongo import get_mongo_client
-from .common import DV_DEFAULTS, _get_targets
+from gpt_db.api.nutrition import DV_DEFAULTS, get_targets
 
 
-router = APIRouter(prefix="/food", tags=["food"])
+router = APIRouter(prefix="/targets", tags=["targets"])
 
 
 class TargetUpdates(BaseModel):
@@ -24,13 +24,13 @@ class TargetUpdates(BaseModel):
     carbs: float | None = Field(default=None, ge=0)
 
 
-@router.get("/targets", dependencies=[Depends(require_api_key)])
-async def get_targets() -> JSONResponse:
+@router.get("", dependencies=[Depends(require_api_key)])
+async def get_targets_handler() -> JSONResponse:
     """Return current macro targets."""
     try:
         client = get_mongo_client()
         db = client.get_database("food")
-        targets = await _get_targets(db)
+        targets = await get_targets(db)
         return JSONResponse(content={"targets": targets})
     except Exception as e:
         content = format_mongo_error(e)
@@ -39,7 +39,7 @@ async def get_targets() -> JSONResponse:
         )
 
 
-@router.patch("/targets", dependencies=[Depends(require_api_key)])
+@router.patch("", dependencies=[Depends(require_api_key)])
 async def patch_targets(updates: TargetUpdates) -> JSONResponse:
     """Partially update macro targets."""
     data = updates.model_dump(exclude_none=True)
@@ -53,7 +53,7 @@ async def patch_targets(updates: TargetUpdates) -> JSONResponse:
         db = client.get_database("food")
         col = db.get_collection("targets")
         await col.update_one({"_id": "current"}, {"$set": data}, upsert=True)
-        targets = await _get_targets(db)
+        targets = await get_targets(db)
         return JSONResponse(content={"targets": targets})
     except Exception as e:
         content = format_mongo_error(e)
@@ -62,7 +62,7 @@ async def patch_targets(updates: TargetUpdates) -> JSONResponse:
         )
 
 
-@router.delete("/targets", dependencies=[Depends(require_api_key)])
+@router.delete("", dependencies=[Depends(require_api_key)])
 async def delete_targets() -> JSONResponse:
     """Reset all targets to defaults."""
     try:
@@ -78,7 +78,7 @@ async def delete_targets() -> JSONResponse:
         )
 
 
-@router.delete("/targets/{macro}", dependencies=[Depends(require_api_key)])
+@router.delete("/{macro}", dependencies=[Depends(require_api_key)])
 async def delete_target_macro(macro: str) -> JSONResponse:
     """Reset a single macro to its default."""
     if macro not in DV_DEFAULTS:
@@ -91,7 +91,7 @@ async def delete_target_macro(macro: str) -> JSONResponse:
         db = client.get_database("food")
         col = db.get_collection("targets")
         await col.update_one({"_id": "current"}, {"$unset": {macro: ""}})
-        targets = await _get_targets(db)
+        targets = await get_targets(db)
         return JSONResponse(content={"targets": targets})
     except Exception as e:
         content = format_mongo_error(e)

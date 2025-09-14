@@ -10,10 +10,10 @@ from pydantic.config import ConfigDict
 from gpt_db.api.deps import require_api_key
 from gpt_db.api.utils import format_mongo_error, success_response, error_response
 from gpt_db.db.mongo import get_mongo_client
-from .common import _get_targets
+from gpt_db.api.nutrition import get_targets
 
 
-router = APIRouter(prefix="/food", tags=["food"])
+router = APIRouter(prefix="/log", tags=["log"])
 
 
 class LogEntry(BaseModel):
@@ -43,8 +43,8 @@ def _serialize(doc: Dict[str, Any]) -> Dict[str, Any]:
     return result
 
 
-@router.get("/log", dependencies=[Depends(require_api_key)])
-async def get_log(date: Optional[str] = Query(default=None)) -> JSONResponse:
+@router.get("", dependencies=[Depends(require_api_key)])
+async def list_entries(date: Optional[str] = Query(default=None)) -> JSONResponse:
     """Return log entries for the given date (UTC)."""
     try:
         query_date = (
@@ -56,7 +56,7 @@ async def get_log(date: Optional[str] = Query(default=None)) -> JSONResponse:
         db = client.get_database("food")
         log_col = db.get_collection("log")
         catalog_col = db.get_collection("catalog")
-        targets = await _get_targets(db)
+        targets = await get_targets(db)
         cursor = (
             log_col.find({"timestamp": {"$gte": start, "$lt": end}})
             .sort("timestamp")
@@ -111,8 +111,8 @@ async def get_log(date: Optional[str] = Query(default=None)) -> JSONResponse:
         )
 
 
-@router.post("/log", dependencies=[Depends(require_api_key)])
-async def append_log(entry: LogEntry) -> JSONResponse:
+@router.post("", dependencies=[Depends(require_api_key)])
+async def add_entry(entry: LogEntry) -> JSONResponse:
     """Append a log entry manually."""
     try:
         client = get_mongo_client()
@@ -142,8 +142,8 @@ async def append_log(entry: LogEntry) -> JSONResponse:
         )
 
 
-@router.delete("/log/{log_id}", dependencies=[Depends(require_api_key)])
-async def delete_log(log_id: str) -> JSONResponse:
+@router.delete("/{log_id}", dependencies=[Depends(require_api_key)])
+async def delete_entry(log_id: str) -> JSONResponse:
     """Soft delete a log entry by moving it to log_trash."""
     try:
         client = get_mongo_client()
@@ -172,8 +172,8 @@ async def delete_log(log_id: str) -> JSONResponse:
         )
 
 
-@router.post("/log/undo", dependencies=[Depends(require_api_key)])
-async def undo_log() -> JSONResponse:
+@router.post("/undo", dependencies=[Depends(require_api_key)])
+async def undo_last_entry() -> JSONResponse:
     """Undo the most recent log entry."""
     try:
         client = get_mongo_client()

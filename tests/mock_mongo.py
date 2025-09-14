@@ -5,8 +5,10 @@ from bson import ObjectId
 from fastapi.testclient import TestClient
 
 from gpt_db.app import create_app
-import gpt_db.api.food.catalog as catalog
-import gpt_db.api.food.stock as stock
+import gpt_db.api.catalog as catalog
+import gpt_db.api.log as log
+import gpt_db.api.stock as stock
+import gpt_db.api.targets as targets
 import gpt_db.db.mongo as mongo
 
 
@@ -89,5 +91,7 @@ def create_client(monkeypatch, collections: Iterable[str] = ("catalog", "stock")
     monkeypatch.setattr(mongo, "ensure_indexes", lambda: None)
     monkeypatch.setattr(catalog, "get_mongo_client", lambda: fake_client)
     monkeypatch.setattr(stock, "get_mongo_client", lambda: fake_client)
+    monkeypatch.setattr(log, "get_mongo_client", lambda: fake_client)
+    monkeypatch.setattr(targets, "get_mongo_client", lambda: fake_client)
     app = create_app()
     return TestClient(app)

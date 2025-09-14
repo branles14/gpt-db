@@ -107,7 +107,7 @@ def catalog() -> None:
 @click.pass_obj
 def catalog_list(client: APIClient, q: Optional[str], upc: Optional[str], tag: Optional[str]) -> None:
     params = {k: v for k, v in {"q": q, "upc": upc, "tag": tag}.items() if v}
-    client.request("GET", "/food/catalog", params=params)
+    client.request("GET", "/catalog", params=params)
 
 
 @catalog.command("upsert")
@@ -115,7 +115,7 @@ def catalog_list(client: APIClient, q: Optional[str], upc: Optional[str], tag: O
 @click.pass_obj
 def catalog_upsert(client: APIClient, payload: Any) -> None:
     """Create or update a product with a JSON payload."""
-    client.request("POST", "/food/catalog", json_data=payload)
+    client.request("POST", "/catalog", json_data=payload)
 
 
 @catalog.command("get")
@@ -123,7 +123,7 @@ def catalog_upsert(client: APIClient, payload: Any) -> None:
 @click.pass_obj
 def catalog_get(client: APIClient, product_id: str) -> None:
     """Retrieve a product by its ID."""
-    client.request("GET", f"/food/catalog/{product_id}")
+    client.request("GET", f"/catalog/{product_id}")
 
 
 @catalog.command("delete")
@@ -132,7 +132,7 @@ def catalog_get(client: APIClient, product_id: str) -> None:
 @click.pass_obj
 def catalog_delete(client: APIClient, product_id: str, force: bool) -> None:
     params = {"force": "true"} if force else None
-    client.request("DELETE", f"/food/catalog/{product_id}", params=params)
+    client.request("DELETE", f"/catalog/{product_id}", params=params)
 
 
 # Stock commands
@@ -145,7 +145,7 @@ def stock() -> None:
 @click.option("--view", type=click.Choice(["aggregate", "items"]), default="aggregate", show_default=True)
 @click.pass_obj
 def stock_get(client: APIClient, view: str) -> None:
-    client.request("GET", "/food/stock", params={"view": view})
+    client.request("GET", "/stock", params={"view": view})
 
 
 @stock.command("add")
@@ -153,7 +153,7 @@ def stock_get(client: APIClient, view: str) -> None:
 @click.pass_obj
 def stock_add(client: APIClient, payload: Any) -> None:
     """Add stock units from a JSON object: {"items": [...]}"""
-    client.request("POST", "/food/stock", json_data=payload)
+    client.request("POST", "/stock", json_data=payload)
 
 
 @stock.command("consume")
@@ -161,7 +161,7 @@ def stock_add(client: APIClient, payload: Any) -> None:
 @click.pass_obj
 def stock_consume(client: APIClient, payload: Any) -> None:
     """Consume stock and log nutrition."""
-    client.request("POST", "/food/stock/consume", json_data=payload)
+    client.request("POST", "/stock/consume", json_data=payload)
 
 
 @stock.command("remove")
@@ -169,7 +169,7 @@ def stock_consume(client: APIClient, payload: Any) -> None:
 @click.pass_obj
 def stock_remove(client: APIClient, payload: Any) -> None:
     """Remove stock with a reason (no nutrition log)."""
-    client.request("POST", "/food/stock/remove", json_data=payload)
+    client.request("POST", "/stock/remove", json_data=payload)
 
 
 @stock.command("delete")
@@ -177,7 +177,7 @@ def stock_remove(client: APIClient, payload: Any) -> None:
 @click.pass_obj
 def stock_delete(client: APIClient, stock_uuid: str) -> None:
     """Delete a stock row by its UUID."""
-    client.request("DELETE", f"/food/stock/{stock_uuid}")
+    client.request("DELETE", f"/stock/{stock_uuid}")
 
 
 # Log commands
@@ -191,7 +191,7 @@ def log() -> None:
 @click.pass_obj
 def log_get(client: APIClient, date: Optional[str]) -> None:
     params = {"date": date} if date else None
-    client.request("GET", "/food/log", params=params)
+    client.request("GET", "/log", params=params)
 
 
 @log.command("append")
@@ -199,7 +199,7 @@ def log_get(client: APIClient, date: Optional[str]) -> None:
 @click.pass_obj
 def log_append(client: APIClient, payload: Any) -> None:
     """Append an entry to the food log."""
-    client.request("POST", "/food/log", json_data=payload)
+    client.request("POST", "/log", json_data=payload)
 
 
 @log.command("delete")
@@ -207,14 +207,14 @@ def log_append(client: APIClient, payload: Any) -> None:
 @click.pass_obj
 def log_delete(client: APIClient, log_id: str) -> None:
     """Soft delete a log entry."""
-    client.request("DELETE", f"/food/log/{log_id}")
+    client.request("DELETE", f"/log/{log_id}")
 
 
 @log.command("undo")
 @click.pass_obj
 def log_undo(client: APIClient) -> None:
     """Undo the most recent log entry."""
-    client.request("POST", "/food/log/undo")
+    client.request("POST", "/log/undo")
 
 
 if __name__ == "__main__":

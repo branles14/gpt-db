@@ -24,12 +24,12 @@ paths:
           description: Service healthy
         '503':
           description: Service unhealthy
-  /food/catalog:
+  /catalog:
     get:
       summary: List products
       operationId: listProducts
       tags:
-        - food
+        - catalog
       parameters:
         - in: query
           name: q
@@ -53,7 +53,7 @@ paths:
       summary: Create or update a product
       operationId: upsertProduct
       tags:
-        - food
+        - catalog
       requestBody:
         required: true
         content:
@@ -223,12 +223,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/CatalogItemResponse'
-  /food/catalog/{product_id}:
+  /catalog/{product_id}:
     get:
       summary: Retrieve product by ID
       operationId: getProduct
       tags:
-        - food
+        - catalog
       parameters:
         - in: path
           name: product_id
@@ -244,7 +244,7 @@ paths:
       summary: Delete product
       operationId: deleteProduct
       tags:
-        - food
+        - catalog
       parameters:
         - in: path
           name: product_id
@@ -263,12 +263,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/DeletionResponse'
-  /food/stock:
+  /stock:
     get:
       summary: List stock
-      operationId: getFoodStock
+      operationId: listStock
       tags:
-        - food
+        - stock
       parameters:
         - in: query
           name: view
@@ -281,9 +281,9 @@ paths:
           description: Successful response
     post:
       summary: Add stock units
-      operationId: addFoodStock
+      operationId: addStock
       tags:
-        - food
+        - stock
       requestBody:
         required: true
         content:
@@ -327,12 +327,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/StockUpdatedResponse'
-  /food/stock/consume:
+  /stock/consume:
     post:
       summary: Consume stock and log nutrition
-      operationId: consumeFoodStock
+      operationId: consumeStock
       tags:
-        - food
+        - stock
       requestBody:
         required: true
         content:
@@ -353,12 +353,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/StockRemainingResponse'
-  /food/stock/remove:
+  /stock/remove:
     post:
       summary: Remove stock without log
-      operationId: removeFoodStock
+      operationId: removeStock
       tags:
-        - food
+        - stock
       requestBody:
         required: true
         content:
@@ -381,12 +381,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/StockRemainingResponse'
-  /food/stock/{stock_uuid}:
+  /stock/{stock_uuid}:
     delete:
       summary: Delete specific stock row
       operationId: deleteStockRow
       tags:
-        - food
+        - stock
       parameters:
         - in: path
           name: stock_uuid
@@ -400,12 +400,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/DeletionResponse'
-  /food/log:
+  /log:
     get:
       summary: Retrieve log entries
-      operationId: getFoodLog
+      operationId: listLog
       tags:
-        - food
+        - log
       parameters:
         - in: query
           name: date
@@ -418,9 +418,9 @@ paths:
           description: Successful response
     post:
       summary: Append log entry
-      operationId: appendFoodLog
+      operationId: appendLog
       tags:
-        - food
+        - log
       requestBody:
         required: true
         content:
@@ -449,12 +449,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/LogAppendResponse'
-  /food/log/{log_id}:
+  /log/{log_id}:
     delete:
       summary: Delete log entry
-      operationId: deleteFoodLog
+      operationId: deleteLog
       tags:
-        - food
+        - log
       parameters:
         - in: path
           name: log_id
@@ -468,12 +468,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/DeletionResponse'
-  /food/log/undo:
+  /log/undo:
     post:
       summary: Undo most recent log entry
-      operationId: undoFoodLog
+      operationId: undoLog
       tags:
-        - food
+        - log
       responses:
         '200':
           description: Log entry undone
@@ -481,20 +481,20 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/LogUndoResponse'
-  /food/targets:
+  /targets:
     get:
       summary: Get macro targets
-      operationId: getFoodTargets
+      operationId: getTargets
       tags:
-        - food
+        - targets
       responses:
         '200':
           description: Current targets
     patch:
       summary: Update macro targets
-      operationId: patchFoodTargets
+      operationId: patchTargets
       tags:
-        - food
+        - targets
       requestBody:
         required: true
         content:
@@ -520,18 +520,18 @@ paths:
           description: Targets updated
     delete:
       summary: Reset all macro targets
-      operationId: deleteFoodTargets
+      operationId: deleteTargets
       tags:
-        - food
+        - targets
       responses:
         '200':
           description: Targets reset
-  /food/targets/{macro}:
+  /targets/{macro}:
     delete:
       summary: Reset one macro target
-      operationId: deleteFoodTargetsMacro
+      operationId: deleteTargetMacro
       tags:
-        - food
+        - targets
       parameters:
         - in: path
           name: macro

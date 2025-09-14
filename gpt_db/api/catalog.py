@@ -13,7 +13,7 @@ from gpt_db.api.deps import require_api_key
 from gpt_db.api.utils import format_mongo_error, success_response, error_response
 from gpt_db.db.mongo import get_mongo_client
 
-router = APIRouter(prefix="/food", tags=["food"])
+router = APIRouter(prefix="/catalog", tags=["catalog"])
 
 
 def _serialize(doc: Dict[str, Any]) -> Dict[str, Any]:
@@ -190,7 +190,7 @@ class ProductUpdate(ProductBase):
     pass
 
 
-@router.get("/catalog", dependencies=[Depends(require_api_key)])
+@router.get("", dependencies=[Depends(require_api_key)])
 async def list_products(
     q: Optional[str] = Query(default=None),
     upc: Optional[str] = Query(default=None),
@@ -285,7 +285,7 @@ def _flatten_for_update(
     return set_ops, unset_ops
 
 
-@router.post("/catalog", dependencies=[Depends(require_api_key)])
+@router.post("", dependencies=[Depends(require_api_key)])
 async def upsert_product(payload: Dict[str, Any]) -> JSONResponse:
     """Create or update a product.
 
@@ -402,7 +402,7 @@ async def upsert_product(payload: Dict[str, Any]) -> JSONResponse:
         )
 
 
-@router.get("/catalog/{product_id}", dependencies=[Depends(require_api_key)])
+@router.get("/{product_id}", dependencies=[Depends(require_api_key)])
 async def get_product(product_id: str) -> JSONResponse:
     """Retrieve a product by its ID."""
     try:
@@ -434,7 +434,7 @@ async def get_product(product_id: str) -> JSONResponse:
         )
 
 
-@router.delete("/catalog/{product_id}", dependencies=[Depends(require_api_key)])
+@router.delete("/{product_id}", dependencies=[Depends(require_api_key)])
 async def delete_product(product_id: str, force: bool = False) -> JSONResponse:
     """Delete a product if not referenced by stock or log unless forced."""
     try:

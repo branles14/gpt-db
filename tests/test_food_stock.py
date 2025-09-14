@@ -37,10 +37,10 @@ def test_add_stock_fetches_and_inserts_product(monkeypatch):
     mock_openfoodfacts(monkeypatch, handler)
     payload = {"items": [{"upc": "12345", "quantity": 2}]}
     with create_client(monkeypatch) as client:
-        resp = client.post("/food/stock", json=payload, headers={"x-api-key": "secret"})
+        resp = client.post("/stock", json=payload, headers={"x-api-key": "secret"})
         assert resp.status_code == 201
 
-        cat_resp = client.get("/food/catalog", headers={"x-api-key": "secret"})
+        cat_resp = client.get("/catalog", headers={"x-api-key": "secret"})
         item = cat_resp.json()["items"][0]
         assert item["name"] == "Mocked Product"
         assert item["upc"] == "12345"
@@ -48,7 +48,7 @@ def test_add_stock_fetches_and_inserts_product(monkeypatch):
         assert "Sugar" in item["ingredients"]
         assert item["nutrition"]["calories"] == 100
 
-        stock_resp = client.get("/food/stock?view=items", headers={"x-api-key": "secret"})
+        stock_resp = client.get("/stock?view=items", headers={"x-api-key": "secret"})
         stock_item = stock_resp.json()["items"][0]
         assert stock_item["upc"] == "12345"
         assert stock_item["quantity"] == 2
@@ -62,15 +62,15 @@ def test_add_stock_off_404(monkeypatch):
     mock_openfoodfacts(monkeypatch, handler)
     payload = {"items": [{"upc": "12345", "quantity": 1}]}
     with create_client(monkeypatch) as client:
-        resp = client.post("/food/stock", json=payload, headers={"x-api-key": "secret"})
+        resp = client.post("/stock", json=payload, headers={"x-api-key": "secret"})
         assert resp.status_code == 201
 
-        cat_resp = client.get("/food/catalog", headers={"x-api-key": "secret"})
+        cat_resp = client.get("/catalog", headers={"x-api-key": "secret"})
         item = cat_resp.json()["items"][0]
         assert item["upc"] == "12345"
         assert "name" not in item
 
-        stock_resp = client.get("/food/stock?view=items", headers={"x-api-key": "secret"})
+        stock_resp = client.get("/stock?view=items", headers={"x-api-key": "secret"})
         stock_item = stock_resp.json()["items"][0]
         assert stock_item["product_id"] == item["_id"]
 
@@ -82,14 +82,14 @@ def test_add_stock_off_network_error(monkeypatch):
     mock_openfoodfacts(monkeypatch, handler)
     payload = {"items": [{"upc": "12345", "quantity": 1}]}
     with create_client(monkeypatch) as client:
-        resp = client.post("/food/stock", json=payload, headers={"x-api-key": "secret"})
+        resp = client.post("/stock", json=payload, headers={"x-api-key": "secret"})
         assert resp.status_code == 201
 
-        cat_resp = client.get("/food/catalog", headers={"x-api-key": "secret"})
+        cat_resp = client.get("/catalog", headers={"x-api-key": "secret"})
         item = cat_resp.json()["items"][0]
         assert item["upc"] == "12345"
         assert "name" not in item
 
-        stock_resp = client.get("/food/stock?view=items", headers={"x-api-key": "secret"})
+        stock_resp = client.get("/stock?view=items", headers={"x-api-key": "secret"})
         stock_item = stock_resp.json()["items"][0]
         assert stock_item["product_id"] == item["_id"]
