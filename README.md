@@ -10,8 +10,6 @@ A unified [OpenAPI 3.1 specification](openapi.yaml) consolidates all routes unde
 
 - `/`: Returns `{ "message": "🍌" }` when the API key is valid.
 - `/api/health`: Reports overall service status and component checks (e.g. MongoDB). Requires `x-api-key` header.
-- `/list`: Lists MongoDB collections across accessible databases. Requires `x-api-key` header.
-  - Unauthorized requests receive a playful randomized error message.
 - `/docs`, `/openapi.json`: Interactive API docs, no API key required.
 - `/redoc`: Interactive API docs. Requires `x-api-key` header.
 - `/food/catalog`:
@@ -125,7 +123,7 @@ cp .env.example .env
 
 2) Set required variables in `.env`:
 
-- `API_KEY`: any string you choose; used for `/list` auth.
+- `API_KEY`: any string you choose; used for authenticated routes.
 - `MONGO_URI`: Atlas connection string (recommended). Example:
   `mongodb+srv://<user>:<pass>@<cluster>/?retryWrites=true&w=majority`
 
@@ -156,15 +154,6 @@ curl -sS \
   -H "x-api-key: ${API_KEY}" \
     http://localhost:${PORT:-8000}/api/health
 # -> {"status": "ok", "components": {"mongo": "ok"}}
-```
-
-- List MongoDB collections (requires API key):
-
-```bash
-curl -sS \
-  -H "x-api-key: ${API_KEY}" \
-  http://localhost:${PORT:-8000}/list
-# -> {"databases":[{"name":"mydb","collections":["logs","events", ...]}, ...]}
 ```
 
 - List food catalog (requires API key):
@@ -380,18 +369,6 @@ from a file by prefixing the path with `@`.
 python tests/simulate-use.py food catalog upsert '{"upc": "0001", "name": "Apple"}'
 ```
 
-If MongoDB is unreachable or misconfigured, `/list` responds with `503` and a JSON error:
-
-```json
-{
-  "error": true,
-  "type": "DatabaseAuthenticationError",
-  "message": "Unable to connect to MongoDB: authentication failed. Please check your username, password, or connection string.",
-  "code": 8000,
-  "service": "MongoDB Atlas"
-}
-```
-
 ## Troubleshooting Mongo Auth
 
 - Wrong password/URI: Ensure `MONGO_URI` has the correct username and password. If building from separate vars, verify `MONGO_PASS` is used (not a duplicated username).
@@ -439,8 +416,6 @@ curl -sS -H "x-api-key: ${API_KEY}" "${API_URL}"
 curl -sS -H "x-api-key: ${API_KEY}" "${API_URL}/api/health"
 # -> {"mongo":{"status":"ok"}}
 
-# Collections
-curl -sS -H "x-api-key: ${API_KEY}" "${API_URL}/list"
 ```
 
 If you get `404: NOT_FOUND` on `/`, ensure you redeployed with the included `vercel.json` routing.

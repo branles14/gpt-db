@@ -13,13 +13,6 @@ paths:
       responses:
         '200':
           description: Successful response
-  /list:
-    get:
-      summary: List MongoDB collections
-      operationId: listCollections
-      responses:
-        '200':
-          description: Successful response
   /api/health:
     get:
       summary: Service health check

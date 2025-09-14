@@ -88,13 +88,6 @@ def health(client: APIClient) -> None:
     client.request("GET", "/api/health")
 
 
-@cli.command("list")
-@click.pass_obj
-def list_collections(client: APIClient) -> None:
-    """List MongoDB collections (requires API key)."""
-    client.request("GET", "/list")
-
-
 # --- Food -----------------------------------------------------------------
 @cli.group()
 def food() -> None:
