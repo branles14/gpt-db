@@ -21,7 +21,7 @@ class LogEntry(BaseModel):
 
     product_id: Optional[str] = None
     upc: Optional[str] = None
-    units: int = 1
+    units: int = Field(default=1, gt=0)
     timestamp: Optional[datetime] = None
 
     @model_validator(mode="after")
