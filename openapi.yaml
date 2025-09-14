@@ -92,6 +92,7 @@ paths:
                 nutrition:
                   type: object
                   description: Per-unit nutrition facts
+                  additionalProperties: false
                   properties:
                     calories:
                       type: number
