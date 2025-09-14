@@ -4,7 +4,8 @@ import re
 from fastapi import APIRouter, Depends, Query, status, HTTPException
 from fastapi.responses import JSONResponse
 from bson import ObjectId, errors as bson_errors
-from pydantic import BaseModel, Field, model_validator, field_validator
+import json
+from pydantic import BaseModel, Field, model_validator, field_validator, ValidationError
 from pymongo.errors import DuplicateKeyError
 from pydantic.config import ConfigDict
 
@@ -29,53 +30,59 @@ class NutritionFacts(BaseModel):
     Units: macros in grams, energy in kcal, most micronutrients in mg or mcg.
     """
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="forbid")
 
     # Energy
-    calories: Optional[float] = Field(default=None, ge=0)
+    calories: float = Field(default=0, ge=0)
 
     # Macros (g)
-    protein: Optional[float] = Field(default=None, ge=0)
-    fat: Optional[float] = Field(default=None, ge=0)
-    carbs: Optional[float] = Field(default=None, ge=0)
-    fiber: Optional[float] = Field(default=None, ge=0)
-    sugars: Optional[float] = Field(default=None, ge=0)
-    saturated_fat: Optional[float] = Field(default=None, ge=0)
-    trans_fat: Optional[float] = Field(default=None, ge=0)
+    protein: float = Field(default=0, ge=0)
+    fat: float = Field(default=0, ge=0)
+    carbs: float = Field(default=0, ge=0)
+    fiber: float = Field(default=0, ge=0)
+    sugars: float = Field(default=0, ge=0)
+    saturated_fat: float = Field(default=0, ge=0)
+    trans_fat: float = Field(default=0, ge=0)
 
     # Cholesterol and electrolytes
-    cholesterol_mg: Optional[float] = Field(default=None, ge=0)
-    sodium_mg: Optional[float] = Field(default=None, ge=0)
-    potassium_mg: Optional[float] = Field(default=None, ge=0)
+    cholesterol_mg: float = Field(default=0, ge=0)
+    sodium_mg: float = Field(default=0, ge=0)
+    potassium_mg: float = Field(default=0, ge=0)
 
     # Minerals (mg unless mcg specified)
-    calcium_mg: Optional[float] = Field(default=None, ge=0)
-    iron_mg: Optional[float] = Field(default=None, ge=0)
-    magnesium_mg: Optional[float] = Field(default=None, ge=0)
-    phosphorus_mg: Optional[float] = Field(default=None, ge=0)
-    zinc_mg: Optional[float] = Field(default=None, ge=0)
-    selenium_mcg: Optional[float] = Field(default=None, ge=0)
-    copper_mg: Optional[float] = Field(default=None, ge=0)
-    manganese_mg: Optional[float] = Field(default=None, ge=0)
+    calcium_mg: float = Field(default=0, ge=0)
+    iron_mg: float = Field(default=0, ge=0)
+    magnesium_mg: float = Field(default=0, ge=0)
+    phosphorus_mg: float = Field(default=0, ge=0)
+    zinc_mg: float = Field(default=0, ge=0)
+    selenium_mcg: float = Field(default=0, ge=0)
+    copper_mg: float = Field(default=0, ge=0)
+    manganese_mg: float = Field(default=0, ge=0)
 
     # Vitamins (common forms)
-    vitamin_a_mcg: Optional[float] = Field(default=None, ge=0)
-    vitamin_c_mg: Optional[float] = Field(default=None, ge=0)
-    vitamin_d_mcg: Optional[float] = Field(default=None, ge=0)
-    vitamin_e_mg: Optional[float] = Field(default=None, ge=0)
-    vitamin_k_mcg: Optional[float] = Field(default=None, ge=0)
-    thiamin_mg: Optional[float] = Field(default=None, ge=0)  # B1
-    riboflavin_mg: Optional[float] = Field(default=None, ge=0)  # B2
-    niacin_mg: Optional[float] = Field(default=None, ge=0)  # B3
-    vitamin_b6_mg: Optional[float] = Field(default=None, ge=0)
-    folate_mcg: Optional[float] = Field(default=None, ge=0)
-    vitamin_b12_mcg: Optional[float] = Field(default=None, ge=0)
+    vitamin_a_mcg: float = Field(default=0, ge=0)
+    vitamin_c_mg: float = Field(default=0, ge=0)
+    vitamin_d_mcg: float = Field(default=0, ge=0)
+    vitamin_e_mg: float = Field(default=0, ge=0)
+    vitamin_k_mcg: float = Field(default=0, ge=0)
+    thiamin_mg: float = Field(default=0, ge=0)  # B1
+    riboflavin_mg: float = Field(default=0, ge=0)  # B2
+    niacin_mg: float = Field(default=0, ge=0)  # B3
+    vitamin_b6_mg: float = Field(default=0, ge=0)
+    folate_mcg: float = Field(default=0, ge=0)
+    vitamin_b12_mcg: float = Field(default=0, ge=0)
+
+    @model_validator(mode="after")
+    def _require_any_field(self) -> "NutritionFacts":
+        if not self.model_fields_set:
+            raise ValueError("nutrition must include at least one value")
+        return self
 
 
 class ProductBase(BaseModel):
     """Shared fields and validators for product models."""
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="forbid")
 
     # Common fields (optional by default; creation model will require name)
     name: Optional[str] = None
@@ -388,6 +395,11 @@ async def upsert_product(payload: Dict[str, Any]) -> JSONResponse:
             content={"item": _serialize(doc)},
             message="Product created",
             status_code=status.HTTP_201_CREATED,
+        )
+    except ValidationError as e:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=json.loads(e.json()),
         )
     except HTTPException:
         raise
