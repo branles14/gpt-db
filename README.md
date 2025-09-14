@@ -26,7 +26,14 @@ A unified [OpenAPI 3.1 specification](openapi.yaml) consolidates all routes unde
     - Accepts optional `tags`, `ingredients`, and a nested `nutrition` object with
       macros, vitamins, and minerals per unit. For backward compatibility,
       top‑level macro fields (`calories`, `protein`, `fat`, `carbs`) are accepted
-      and merged into `nutrition`.
+      and merged into `nutrition`. Unspecified nutrition properties default to `0`.
+      For example:
+
+      ```json
+      { "name": "CalOnly", "nutrition": { "calories": 10 } }
+      ```
+
+      persists every other nutrition field as `0`.
     Note: UPC must be provided as a JSON string of digits (e.g., "070662404072"); numeric values will be rejected to prevent loss of leading zeros.
   - `GET /food/catalog/{product_id}` – retrieve a product.
   - `DELETE /food/catalog/{product_id}` – delete a product (`force=true` to bypass reference checks).

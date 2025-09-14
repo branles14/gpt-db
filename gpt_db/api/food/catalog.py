@@ -72,12 +72,6 @@ class NutritionFacts(BaseModel):
     folate_mcg: float = Field(default=0, ge=0)
     vitamin_b12_mcg: float = Field(default=0, ge=0)
 
-    @model_validator(mode="after")
-    def _require_any_field(self) -> "NutritionFacts":
-        if not self.model_fields_set:
-            raise ValueError("nutrition must include at least one value")
-        return self
-
 
 class ProductBase(BaseModel):
     """Shared fields and validators for product models."""
@@ -305,6 +299,19 @@ async def upsert_product(payload: Dict[str, Any]) -> JSONResponse:
         collection = client.get_database("food").get_collection("catalog")
         upc = payload.get("upc")
 
+        def build_nutrition(p: Dict[str, Any]) -> Dict[str, Any]:
+            """Return a full NutritionFacts dict with zeros for missing fields."""
+            nutrition_data: Dict[str, Any] = dict(p.get("nutrition") or {})
+            for m in ("calories", "protein", "fat", "carbs"):
+                if m in p:
+                    nutrition_data[m] = p[m]
+            unset_fields = {k for k, v in nutrition_data.items() if v is None}
+            clean = {k: v for k, v in nutrition_data.items() if v is not None}
+            facts = NutritionFacts(**clean).model_dump()
+            for k in unset_fields:
+                facts[k] = None
+            return facts
+
         if upc:
             # Does a product with this UPC already exist?
             existing = await collection.find_one({"upc": upc})
@@ -328,26 +335,10 @@ async def upsert_product(payload: Dict[str, Any]) -> JSONResponse:
 
                 # Handle nutrition and top-level macro aliases
                 macros = {k for k in ("calories", "protein", "fat", "carbs") if k in provided_keys}
-                if "nutrition" in provided_keys:
-                    # Explicitly provided; if null, we clear nutrition entirely
-                    if payload.get("nutrition") is None:
-                        normalized["nutrition"] = None
-                    else:
-                        normalized["nutrition"] = (
-                            parsed.nutrition.model_dump(exclude_none=True) if parsed.nutrition else {}
-                        )
-                if macros:
-                    # Start from parsed nutrition (if not explicitly cleared above)
-                    if normalized.get("nutrition") is None and "nutrition" in provided_keys:
-                        # Nutrition explicitly cleared; macros are ignored in favor of full clear
-                        pass
-                    else:
-                        base_nutrition = (
-                            parsed.nutrition.model_dump(exclude_none=True) if parsed.nutrition else {}
-                        )
-                        for m in macros:
-                            base_nutrition[m] = payload.get(m)
-                        normalized["nutrition"] = base_nutrition
+                if "nutrition" in provided_keys and payload.get("nutrition") is None:
+                    normalized["nutrition"] = None
+                elif "nutrition" in provided_keys or macros:
+                    normalized["nutrition"] = build_nutrition(payload)
 
                 # Preserve any other extra fields exactly as provided
                 known = {"name", "upc", "tags", "ingredients", "nutrition", "calories", "protein", "fat", "carbs"}
@@ -384,6 +375,7 @@ async def upsert_product(payload: Dict[str, Any]) -> JSONResponse:
 
         # Create path: validate with creation model (requires name)
         data = ProductCreate(**payload).model_dump(exclude_none=True)
+        data["nutrition"] = build_nutrition(payload)
         result = await collection.insert_one(data)
         doc = await collection.find_one({"_id": result.inserted_id})
         if not result.acknowledged or not doc:

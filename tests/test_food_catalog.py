@@ -72,11 +72,25 @@ def test_unknown_nutrition_key_returns_422(monkeypatch):
         assert resp.status_code == 422
 
 
-def test_empty_nutrition_object_returns_422(monkeypatch):
+def test_empty_nutrition_defaults_to_zero(monkeypatch):
     payload = {"name": "Empty", "nutrition": {}}
     with create_client(monkeypatch) as client:
         resp = client.post("/food/catalog", json=payload, headers={"x-api-key": "secret"})
-        assert resp.status_code == 422
+        assert resp.status_code == 201
+        item = resp.json()["item"]
+        assert all(v == 0 for v in item["nutrition"].values())
+
+
+def test_partial_nutrition_defaults_to_zero(monkeypatch):
+    payload = {"name": "Partial", "nutrition": {"calories": 10}}
+    with create_client(monkeypatch) as client:
+        resp = client.post("/food/catalog", json=payload, headers={"x-api-key": "secret"})
+        assert resp.status_code == 201
+        item = resp.json()["item"]
+        assert item["nutrition"]["calories"] == 10
+        for k, v in item["nutrition"].items():
+            if k != "calories":
+                assert v == 0
 
 
 def test_full_nutrition_persists(monkeypatch):
