@@ -85,7 +85,7 @@ def root(client: APIClient) -> None:
 @click.pass_obj
 def health(client: APIClient) -> None:
     """Check service health (requires API key)."""
-    client.request("GET", "/health")
+    client.request("GET", "/api/health")
 
 
 @cli.command("list")

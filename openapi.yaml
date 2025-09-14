@@ -20,7 +20,7 @@ paths:
       responses:
         '200':
           description: Successful response
-  /health:
+  /api/health:
     get:
       summary: Service health check
       operationId: getHealth
