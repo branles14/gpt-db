@@ -1,6 +1,7 @@
 from datetime import datetime
 from uuid import uuid4
 from typing import Any, Dict, List, Optional
+import logging
 
 from bson import ObjectId, errors as bson_errors
 from fastapi import APIRouter, Depends, Query, status, HTTPException
@@ -13,6 +14,7 @@ from gpt_db.api.deps import require_api_key
 from gpt_db.api.utils import format_mongo_error, success_response, error_response
 from gpt_db.db.mongo import get_mongo_client
 from gpt_db.api.food.catalog import NutritionFacts
+from gpt_db.api.food.openfoodfacts import fetch_product
 
 router = APIRouter(prefix="/food", tags=["food"])
 
@@ -174,6 +176,29 @@ async def add_food_stock(payload: AddStockRequest) -> JSONResponse:
             # Using UPC; try to inherit fields from catalog
             filter = {"upc": item.upc}
             product_doc = await catalog.find_one({"upc": item.upc})
+
+            if not product_doc:
+                try:
+                    fetched = await fetch_product(item.upc)
+                except Exception as exc:  # pragma: no cover - network errors
+                    logging.warning(
+                        "OpenFoodFacts lookup failed for %s: %s", item.upc, exc
+                    )
+                    fetched = None
+                if fetched:
+                    try:
+                        await catalog.update_one(
+                            {"upc": item.upc},
+                            {"$set": {"upc": item.upc, **fetched}},
+                            upsert=True,
+                        )
+                        product_doc = await catalog.find_one({"upc": item.upc})
+                    except Exception as exc:  # pragma: no cover - db errors
+                        logging.warning(
+                            "Failed to upsert OpenFoodFacts data for %s: %s",
+                            item.upc,
+                            exc,
+                        )
 
             # Sync provided metadata into catalog based on UPC
             if item.upc:
