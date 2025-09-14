@@ -277,3 +277,4 @@ Behavior:
 - If UPC not found in catalog, a new catalog item is created with provided details.
 - If UPC exists, new values are merged (lists are unioned; nutrition fields are merged).
 - Stock documents store a snapshot of catalog fields but have their own `_id`.
+- When UPC is unknown, the service attempts to fetch product details from OpenFoodFacts.org.
