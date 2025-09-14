@@ -63,6 +63,48 @@ A unified [OpenAPI 3.1 specification](openapi.yaml) consolidates all routes unde
 
 Full request/response examples for `/food/catalog`, `/food/stock`, `/food/log`, and `/food/targets` are available in [gpt_db/api/food/README.md](gpt_db/api/food/README.md).
 
+## Product Lookup
+
+The API resolves product details in this order:
+
+1. **Local catalog**
+2. **[OpenFoodFacts](https://world.openfoodfacts.org/)** – a public food database
+
+If a UPC isn't found locally, the service fetches data from OpenFoodFacts using `httpx` (no API key required) and inserts it into the catalog automatically before replying.
+
+### Example flow
+
+Request:
+
+```bash
+curl -sS -X POST \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: ${API_KEY}" \
+  -d '{"items":[{"upc":"737628064502","quantity":1}]}' \
+  http://localhost:${PORT:-8000}/food/stock
+```
+
+Response when the UPC is missing from the catalog:
+
+```json
+{
+  "success": true,
+  "message": "Stock updated",
+  "items": [
+    { "_id": "64abc...", "upc": "737628064502", "quantity": 1 }
+  ],
+  "catalog": {
+    "_id": "64def...",
+    "upc": "737628064502",
+    "name": "Sriracha Sauce",
+    "tags": ["sauces"],
+    "nutrition": { "calories": 93, "protein": 1.2, "fat": 0.8, "carbs": 20 }
+  }
+}
+```
+
+The product details are fetched from OpenFoodFacts and added to the catalog automatically.
+
 ## Response Conventions
 
 Mutating endpoints in catalog, stock, and log return a consistent envelope:
