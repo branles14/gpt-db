@@ -38,6 +38,7 @@ async def fetch_product(upc: str) -> dict | None:
 
     # Collect tags from categories/labels
     tags: List[str] = []
+    seen_tags: set[str] = set()
     for key in ("categories_tags", "labels_tags"):
         values = product.get(key)
         if isinstance(values, list):
@@ -47,13 +48,16 @@ async def fetch_product(upc: str) -> dict | None:
                     continue
                 if ":" in s:
                     s = s.split(":", 1)[1]
-                if s.lower() not in {t.lower() for t in tags}:
+                lower_s = s.lower()
+                if lower_s not in seen_tags:
                     tags.append(s)
+                    seen_tags.add(lower_s)
     if tags:
         result["tags"] = tags
 
     # Ingredients
     ingredients: List[str] = []
+    seen_ingredients: set[str] = set()
     ing_list = product.get("ingredients")
     if isinstance(ing_list, list):
         for obj in ing_list:
@@ -61,15 +65,19 @@ async def fetch_product(upc: str) -> dict | None:
             if not text:
                 continue
             t = str(text).strip()
-            if t and t.lower() not in {i.lower() for i in ingredients}:
+            lower_t = t.lower()
+            if t and lower_t not in seen_ingredients:
                 ingredients.append(t)
+                seen_ingredients.add(lower_t)
     else:
         text = product.get("ingredients_text")
         if isinstance(text, str):
             for part in text.split(","):
                 t = part.strip()
-                if t and t.lower() not in {i.lower() for i in ingredients}:
+                lower_t = t.lower()
+                if t and lower_t not in seen_ingredients:
                     ingredients.append(t)
+                    seen_ingredients.add(lower_t)
     if ingredients:
         result["ingredients"] = ingredients
 
