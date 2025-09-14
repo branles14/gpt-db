@@ -1,6 +1,31 @@
 from mock_mongo import create_client
 
 
+def test_create_by_upc_fetches_name(monkeypatch):
+    async def fake_fetch(upc: str):
+        return {"name": "Fetched"}
+
+    monkeypatch.setattr("gpt_db.api.catalog.fetch_product", fake_fetch)
+    payload = {"upc": "123"}
+    with create_client(monkeypatch) as client:
+        resp = client.post("/catalog", json=payload, headers={"x-api-key": "secret"})
+        assert resp.status_code == 201
+        item = resp.json()["item"]
+        assert item["name"] == "Fetched"
+        assert item["upc"] == "123"
+
+
+def test_create_by_upc_missing_name_returns_422(monkeypatch):
+    async def fake_fetch(upc: str):
+        return None
+
+    monkeypatch.setattr("gpt_db.api.catalog.fetch_product", fake_fetch)
+    payload = {"upc": "123"}
+    with create_client(monkeypatch) as client:
+        resp = client.post("/catalog", json=payload, headers={"x-api-key": "secret"})
+        assert resp.status_code == 422
+
+
 def test_unknown_nutrition_key_returns_422(monkeypatch):
     payload = {"name": "Mystery", "nutrition": {"per_serving": {"calories": 10, "bogus": 1}}}
     with create_client(monkeypatch) as client:

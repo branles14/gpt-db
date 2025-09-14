@@ -25,6 +25,10 @@ curl -sS -H "x-api-key: ${API_KEY}" \
 ### `POST /catalog`
 Create or update a product by `upc`.
 
+If a payload contains only `upc`, the service tries to fill in missing details
+from OpenFoodFacts. At minimum, a product name must be found; otherwise the
+request fails with `422 Unprocessable Entity`.
+
 Provide per-unit nutrition facts in a nested `nutrition` object. Supported fields include macros (e.g., `calories`, `protein`, `fat`, `carbs`, `fiber`, `sugars`), vitamins (e.g., `vitamin_c_mg`, `vitamin_d_mcg`), and minerals (e.g., `sodium_mg`, `potassium_mg`, `calcium_mg`). Optionally include `tags: string[]` and `ingredients: string[]`. For backward compatibility, top-level macro fields may be provided and will be merged into `nutrition`.
 
 Important: UPC must be a JSON string of digits. Leading zeros are significant and must be preserved. Example: `"070662404072"` (not an unquoted number).

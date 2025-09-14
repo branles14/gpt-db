@@ -10,6 +10,7 @@ from pydantic.config import ConfigDict
 
 from gpt_db.api.deps import require_api_key
 from gpt_db.api.utils import format_mongo_error, success_response, error_response
+from gpt_db.api.openfoodfacts import fetch_product
 from gpt_db.db.mongo import get_mongo_client
 
 router = APIRouter(prefix="/catalog", tags=["catalog"])
@@ -311,7 +312,9 @@ async def upsert_product(payload: Dict[str, Any]) -> JSONResponse:
     Behavior
     - If `upc` is provided and an item exists: perform a partial merge update.
       Only provided fields are changed; sending `null` explicitly clears a field.
-    - Otherwise: create a new product (requires `name`).
+    - Otherwise: create a new product. If `name` is omitted, the service will
+      attempt to populate it (and other fields) from OpenFoodFacts using the
+      provided `upc`.
     """
     try:
         client = get_mongo_client()
@@ -404,8 +407,14 @@ async def upsert_product(payload: Dict[str, Any]) -> JSONResponse:
                     message="Product updated",
                     status_code=status.HTTP_200_OK,
                 )
+            else:
+                if not payload.get("name"):
+                    fetched = await fetch_product(upc)
+                    if fetched:
+                        for k, v in fetched.items():
+                            payload.setdefault(k, v)
 
-        # Create path: validate with creation model (requires name)
+        # Create path: validate with creation model (name may be auto-filled)
         data = ProductCreate(**payload).model_dump(exclude_none=True)
         data["nutrition"] = build_nutrition(payload)
         result = await collection.insert_one(data)
