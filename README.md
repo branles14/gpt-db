@@ -17,7 +17,9 @@ A unified [OpenAPI 3.1 specification](openapi.yaml) consolidates all routes unde
     across `name`, `upc`, `tags`, and `ingredients` (case-insensitive). `upc`
     matches exactly; `tag` matches within the `tags` array case-insensitively.
   - `POST` – create or update a product by `upc`.
-    - Create: if no existing item with the provided `upc` is found, requires `name`.
+    - Create: if no existing item with the provided `upc` is found, `name` is
+      normally required. If omitted, the service attempts to resolve it (and
+      other details) from OpenFoodFacts using the `upc`.
     - Update: if an item with the provided `upc` exists, performs a partial merge:
       only the fields you include are modified; other fields remain unchanged.
       To clear a field, send it explicitly as `null`.

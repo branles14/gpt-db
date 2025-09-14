@@ -60,11 +60,13 @@ paths:
           application/json:
             schema:
               type: object
-              required: [name]
               properties:
                 name:
                   type: string
-                  description: Human-readable product name
+                  description: >-
+                    Human-readable product name. If omitted, the service will
+                    attempt to resolve it from OpenFoodFacts using the provided
+                    `upc`.
                 upc:
                   type: string
                   description: |
