@@ -10,7 +10,7 @@ def test_patch_targets_has_schema_properties():
     app = create_app()
     with TestClient(app) as client:
         schema = client.get("/openapi.json").json()
-        patch_schema = schema["paths"]["/food/targets"]["patch"]["requestBody"]["content"]["application/json"]["schema"]
+        patch_schema = schema["paths"]["/targets"]["patch"]["requestBody"]["content"]["application/json"]["schema"]
         if "$ref" in patch_schema:
             ref_name = patch_schema["$ref"].split("/")[-1]
             patch_schema = schema["components"]["schemas"][ref_name]

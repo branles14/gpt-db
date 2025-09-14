@@ -12,7 +12,7 @@ A unified [OpenAPI 3.1 specification](openapi.yaml) consolidates all routes unde
 - `/api/health`: Reports overall service status and component checks (e.g. MongoDB). Requires `x-api-key` header.
 - `/docs`, `/openapi.json`: Interactive API docs, no API key required.
 - `/redoc`: Interactive API docs. Requires `x-api-key` header.
-- `/food/catalog`:
+- `/catalog`:
   - `GET` – list products with optional filters (`q`, `upc`, `tag`). `q` searches
     across `name`, `upc`, `tags`, and `ingredients` (case-insensitive). `upc`
     matches exactly; `tag` matches within the `tags` array case-insensitively.
@@ -33,33 +33,33 @@ A unified [OpenAPI 3.1 specification](openapi.yaml) consolidates all routes unde
 
       persists every other nutrition field as `0`.
     Note: UPC must be provided as a JSON string of digits (e.g., "070662404072"); numeric values will be rejected to prevent loss of leading zeros.
-  - `GET /food/catalog/{product_id}` – retrieve a product.
-  - `DELETE /food/catalog/{product_id}` – delete a product (`force=true` to bypass reference checks).
+  - `GET /catalog/{product_id}` – retrieve a product.
+  - `DELETE /catalog/{product_id}` – delete a product (`force=true` to bypass reference checks).
 
   Catalog upsert semantics:
   - POST with `upc` performs an upsert using `$set`: fields you provide are added/updated on the existing doc; others remain unchanged.
   - If the doc is created: returns `201 Created`; if it existed and was updated: returns `200 OK`.
-  - `nutrition` sent via catalog replaces the entire nutrition object (not a key-wise merge). To incrementally add nutrition keys, you can also use `POST /food/stock`, which merges nutrition keys and unions `tags`/`ingredients`.
+  - `nutrition` sent via catalog replaces the entire nutrition object (not a key-wise merge). To incrementally add nutrition keys, you can also use `POST /stock`, which merges nutrition keys and unions `tags`/`ingredients`.
   - Duplicate UPC handling: a unique sparse index prevents two different documents from sharing the same `upc`. A true duplicate insert (or rare race) can surface `409 Conflict`. Normal upsert-by-UPC updates do not return 409.
-- `/food/stock`:
+- `/stock`:
   - `GET` – list stock with `view=aggregate|items`.
 - `POST` – add units via `{ upc, quantity }`. Optional fields (`name`, `tags`, `ingredients`, `nutrition`) seed or update the catalog.
   Note: `upc` must be a JSON string of digits (e.g., `"070662404072"`). Numbers or strings containing spaces/hyphens are rejected to preserve leading zeros and ensure consistent lookups.
-  - `POST /food/stock/consume` – atomic decrement with log.
-  - `POST /food/stock/remove` – decrement with a `reason` (no nutrition log).
-  - `DELETE /food/stock/{stock_uuid}` – remove a specific stock row.
-- `/food/log`:
+  - `POST /stock/consume` – atomic decrement with log.
+  - `POST /stock/remove` – decrement with a `reason` (no nutrition log).
+  - `DELETE /stock/{stock_uuid}` – remove a specific stock row.
+- `/log`:
   - `GET` – list entries for a day (`date=YYYY-MM-DD`) with totals and remaining targets.
   - `POST` – append a log entry manually.
-  - `DELETE /food/log/{log_id}` – soft delete a log entry.
-  - `POST /food/log/undo` – undo the most recent entry.
-- `/food/targets`:
+  - `DELETE /log/{log_id}` – soft delete a log entry.
+  - `POST /log/undo` – undo the most recent entry.
+- `/targets`:
   - `GET` – current macro targets (defaults to FDA Daily Values).
   - `PATCH` – update one or more targets.
   - `DELETE` – reset all targets to defaults.
-  - `DELETE /food/targets/{macro}` – reset a single macro to its default.
+  - `DELETE /targets/{macro}` – reset a single macro to its default.
 
-Full request/response examples for `/food/catalog`, `/food/stock`, `/food/log`, and `/food/targets` are available in [gpt_db/api/food/README.md](gpt_db/api/food/README.md).
+Full request/response examples for `/catalog`, `/stock`, `/log`, and `/targets` are available in [gpt_db/api/README.md](gpt_db/api/README.md).
 
 ## Product Lookup
 
@@ -79,7 +79,7 @@ curl -sS -X POST \
   -H "Content-Type: application/json" \
   -H "x-api-key: ${API_KEY}" \
   -d '{"items":[{"upc":"737628064502","quantity":1}]}' \
-  http://localhost:${PORT:-8000}/food/stock
+  http://localhost:${PORT:-8000}/stock
 ```
 
 Response when the UPC is missing from the catalog:
@@ -161,7 +161,7 @@ curl -sS \
 ```bash
 curl -sS \
   -H "x-api-key: ${API_KEY}" \
-  http://localhost:${PORT:-8000}/food/catalog
+  http://localhost:${PORT:-8000}/catalog
 # -> {"items": [...]}  # product list
 ```
 
@@ -186,7 +186,7 @@ curl -sS -X POST \
           "potassium_mg": 195
         }
       }' \
-  http://localhost:${PORT:-8000}/food/catalog
+  http://localhost:${PORT:-8000}/catalog
 # -> {"success": true, "message": "Product created", "item": {"_id": "...", "upc": "0001", "name": "Apple", "tags": ["fruit"], "ingredients": ["apple"], "nutrition": {"calories":95,"protein":0.5,"fat":0.3,"carbs":25,"fiber":4.4,"vitamin_c_mg":8.4,"potassium_mg":195}}}
 ```
 
@@ -200,7 +200,7 @@ curl -sS -X POST \
         "upc": "0001",
         "nutrition": { "calories": 100 }
       }' \
-  http://localhost:${PORT:-8000}/food/catalog
+  http://localhost:${PORT:-8000}/catalog
 # -> {"success": true, "message": "Product updated", "item": { ... "nutrition": { ... "calories": 100, ... } }}
 
 # Clear a field by sending null (example: remove calories):
@@ -211,7 +211,7 @@ curl -sS -X POST \
         "upc": "0001",
         "nutrition": { "calories": null }
       }' \
-  http://localhost:${PORT:-8000}/food/catalog
+  http://localhost:${PORT:-8000}/catalog
 ```
 
 - Read food stock (requires API key):
@@ -219,7 +219,7 @@ curl -sS -X POST \
 ```bash
 curl -sS \
   -H "x-api-key: ${API_KEY}" \
-  "http://localhost:${PORT:-8000}/food/stock?view=aggregate"
+  "http://localhost:${PORT:-8000}/stock?view=aggregate"
 # -> {"items": [...]}  # aggregated quantities
 ```
 
@@ -233,7 +233,7 @@ curl -sS -X POST \
         "upc": "0001",
         "nutrition": {"calories": 95, "protein": 0.5, "fat": 0.3, "carbs": 25}
       }' \
-  http://localhost:${PORT:-8000}/food/catalog
+  http://localhost:${PORT:-8000}/catalog
 # -> {"success": true, "message": "Product updated", ...}
 ```
 
@@ -244,7 +244,7 @@ curl -sS -X POST \
   -H "Content-Type: application/json" \
   -H "x-api-key: ${API_KEY}" \
   -d '{"items": [{"upc": "0001", "quantity": 3}]}' \
-  http://localhost:${PORT:-8000}/food/stock
+  http://localhost:${PORT:-8000}/stock
 # -> {"success": true, "message": "Stock updated", "upserted_uuids": ["..."], "count": 1}
 
 - Add to stock and sync catalog details:
@@ -261,7 +261,7 @@ curl -sS -X POST \
         "ingredients": ["banana"],
         "nutrition": {"calories": 105, "protein": 1.3, "carbs": 27}
       }]}' \
-  http://localhost:${PORT:-8000}/food/stock
+  http://localhost:${PORT:-8000}/stock
 ```
 
 Rules:
@@ -277,7 +277,7 @@ curl -sS -X POST \
   -H "Content-Type: application/json" \
   -H "x-api-key: ${API_KEY}" \
   -d '{"upc": "0001", "units": 1}' \
-  http://localhost:${PORT:-8000}/food/stock/consume
+  http://localhost:${PORT:-8000}/stock/consume
 # -> {"success": true, "message": "Stock consumed", "remaining": 2}
 ```
 
@@ -288,7 +288,7 @@ curl -sS -X POST \
   -H "Content-Type: application/json" \
   -H "x-api-key: ${API_KEY}" \
   -d '{"upc": "0001", "units": 1, "reason": "spoilage"}' \
-  http://localhost:${PORT:-8000}/food/stock/remove
+  http://localhost:${PORT:-8000}/stock/remove
 # -> {"success": true, "message": "Stock removed", "remaining": 1}
 
 Notes:
@@ -300,7 +300,7 @@ Notes:
 ```bash
 curl -sS \
   -H "x-api-key: ${API_KEY}" \
-  "http://localhost:${PORT:-8000}/food/log"
+  "http://localhost:${PORT:-8000}/log"
 # -> {"entries": [...], "totals": {...}, "remaining": {...}}
 ```
 
@@ -311,7 +311,7 @@ curl -sS -X POST \
   -H "Content-Type: application/json" \
   -H "x-api-key: ${API_KEY}" \
   -d '{"upc": "0001", "units": 1}' \
-  http://localhost:${PORT:-8000}/food/log
+  http://localhost:${PORT:-8000}/log
 # -> {"success": true, "message": "Log entry created", "log_id": "..."}
 ```
 
@@ -320,7 +320,7 @@ curl -sS -X POST \
 ```bash
 curl -sS -X POST \
   -H "x-api-key: ${API_KEY}" \
-  http://localhost:${PORT:-8000}/food/log/undo
+  http://localhost:${PORT:-8000}/log/undo
 # -> {"success": true, "message": "Last log entry undone", "deleted_id": "..."}
 ```
 
@@ -352,7 +352,7 @@ python tests/simulate-use.py list --api-key ${API_KEY} --api-url http://localhos
     `Server not configured: set MONGO_URI` instead of a generic 503.
 
 - Catalog add “doesn’t stick” or a tool claims success but the item isn’t listed:
-  - Verify the request actually hit `POST /food/catalog` with a `201 Created` or `200 OK` response.
+  - Verify the request actually hit `POST /catalog` with a `201 Created` or `200 OK` response.
   - Ensure `x-api-key` is included; read endpoints will also require it, but double‑check the write.
   - Check that UPC is a quoted string of digits. Example valid payload snippet:
     ```json
@@ -386,7 +386,7 @@ python tests/ping-mongo.py
 - `gpt_db/app.py`: Creates the FastAPI application and mounts routes
 - `gpt_db/`: Application package
   - `gpt_db/api/routes.py`: Root route definitions and sub-router mounting
-  - `gpt_db/api/food/`: Module containing food catalog and stock endpoints
+  - `gpt_db/api/`: Module containing food catalog and stock endpoints
   - `gpt_db/api/deps.py`: Shared dependencies (e.g., API key auth)
   - `gpt_db/api/utils.py`: Helper utilities (e.g., Mongo error formatting)
   - `gpt_db/db/mongo.py`: MongoDB client and helpers

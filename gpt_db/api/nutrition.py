@@ -9,7 +9,7 @@ DV_DEFAULTS: Dict[str, float] = {
 }  # FDA Daily Values for adults and children ≥4 yrs
 
 
-async def _get_targets(db) -> Dict[str, float]:
+async def get_targets(db) -> Dict[str, float]:
     """Fetch current macro targets, falling back to DV defaults."""
     col = db.get_collection("targets")
     doc = await col.find_one({"_id": "current"})

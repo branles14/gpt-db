@@ -4,14 +4,14 @@ from mock_mongo import create_client
 def test_unknown_nutrition_key_returns_422(monkeypatch):
     payload = {"name": "Mystery", "nutrition": {"calories": 10, "bogus": 1}}
     with create_client(monkeypatch) as client:
-        resp = client.post("/food/catalog", json=payload, headers={"x-api-key": "secret"})
+        resp = client.post("/catalog", json=payload, headers={"x-api-key": "secret"})
         assert resp.status_code == 422
 
 
 def test_empty_nutrition_defaults_to_zero(monkeypatch):
     payload = {"name": "Empty", "nutrition": {}}
     with create_client(monkeypatch) as client:
-        resp = client.post("/food/catalog", json=payload, headers={"x-api-key": "secret"})
+        resp = client.post("/catalog", json=payload, headers={"x-api-key": "secret"})
         assert resp.status_code == 201
         item = resp.json()["item"]
         assert all(v == 0 for v in item["nutrition"].values())
@@ -20,7 +20,7 @@ def test_empty_nutrition_defaults_to_zero(monkeypatch):
 def test_partial_nutrition_defaults_to_zero(monkeypatch):
     payload = {"name": "Partial", "nutrition": {"calories": 10}}
     with create_client(monkeypatch) as client:
-        resp = client.post("/food/catalog", json=payload, headers={"x-api-key": "secret"})
+        resp = client.post("/catalog", json=payload, headers={"x-api-key": "secret"})
         assert resp.status_code == 201
         item = resp.json()["item"]
         assert item["nutrition"]["calories"] == 10
@@ -64,10 +64,10 @@ def test_full_nutrition_persists(monkeypatch):
     }
     payload = {"name": "Complete", "nutrition": nutrition}
     with create_client(monkeypatch) as client:
-        resp = client.post("/food/catalog", json=payload, headers={"x-api-key": "secret"})
+        resp = client.post("/catalog", json=payload, headers={"x-api-key": "secret"})
         assert resp.status_code == 201
 
-        list_resp = client.get("/food/catalog", headers={"x-api-key": "secret"})
+        list_resp = client.get("/catalog", headers={"x-api-key": "secret"})
         assert list_resp.status_code == 200
         items = list_resp.json()["items"]
         assert any(

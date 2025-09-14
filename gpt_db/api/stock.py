@@ -13,10 +13,10 @@ from pymongo import ReturnDocument
 from gpt_db.api.deps import require_api_key
 from gpt_db.api.utils import format_mongo_error, success_response, error_response
 from gpt_db.db.mongo import get_mongo_client
-from gpt_db.api.food.catalog import NutritionFacts
-from gpt_db.api.food.openfoodfacts import fetch_product
+from gpt_db.api.catalog import NutritionFacts
+from gpt_db.api.openfoodfacts import fetch_product
 
-router = APIRouter(prefix="/food", tags=["food"])
+router = APIRouter(prefix="/stock", tags=["stock"])
 
 
 class StockItem(BaseModel):
@@ -108,7 +108,7 @@ def _serialize(doc: Dict[str, Any]) -> Dict[str, Any]:
     return result
 
 
-@router.get("/stock", dependencies=[Depends(require_api_key)])
+@router.get("", dependencies=[Depends(require_api_key)])
 async def get_food_stock(
     view: str = Query("aggregate", enum=["aggregate", "items"])
 ) -> JSONResponse:
@@ -159,7 +159,7 @@ async def get_food_stock(
         )
 
 
-@router.post("/stock", dependencies=[Depends(require_api_key)])
+@router.post("", dependencies=[Depends(require_api_key)])
 async def add_food_stock(payload: AddStockRequest) -> JSONResponse:
     """Add stock units for one or more products."""
     try:
@@ -319,7 +319,7 @@ async def add_food_stock(payload: AddStockRequest) -> JSONResponse:
         )
 
 
-@router.post("/stock/consume", dependencies=[Depends(require_api_key)])
+@router.post("/consume", dependencies=[Depends(require_api_key)])
 async def consume_stock(item: ConsumeItem) -> JSONResponse:
     """Atomically decrement stock and log consumption."""
     if item.reason is not None:
@@ -369,7 +369,7 @@ async def consume_stock(item: ConsumeItem) -> JSONResponse:
         )
 
 
-@router.post("/stock/remove", dependencies=[Depends(require_api_key)])
+@router.post("/remove", dependencies=[Depends(require_api_key)])
 async def remove_stock(item: ConsumeItem) -> JSONResponse:
     """Decrement stock without nutritional logging."""
     if not item.reason:
@@ -421,7 +421,7 @@ async def remove_stock(item: ConsumeItem) -> JSONResponse:
         )
 
 
-@router.delete("/stock/{stock_uuid}", dependencies=[Depends(require_api_key)])
+@router.delete("/{stock_uuid}", dependencies=[Depends(require_api_key)])
 async def delete_stock_row(stock_uuid: str) -> JSONResponse:
     """Delete a specific stock document by its UUID."""
     try:
