@@ -83,133 +83,7 @@ paths:
                     type: string
                   description: Ingredient list for the product
                 nutrition:
-                  type: object
-                  description: |
-                    Per-unit nutrition facts. Unspecified properties default to 0.
-                  additionalProperties: false
-                  example:
-                    calories: 50
-                  properties:
-                    calories:
-                      type: number
-                      minimum: 0
-                      description: Energy in kcal per unit
-                    protein:
-                      type: number
-                      minimum: 0
-                      description: Protein (g)
-                    fat:
-                      type: number
-                      minimum: 0
-                      description: Fat (g)
-                    carbs:
-                      type: number
-                      minimum: 0
-                      description: Carbohydrates (g)
-                    fiber:
-                      type: number
-                      minimum: 0
-                      description: Fiber (g)
-                    sugars:
-                      type: number
-                      minimum: 0
-                      description: Sugars (g)
-                    saturated_fat:
-                      type: number
-                      minimum: 0
-                      description: Saturated fat (g)
-                    trans_fat:
-                      type: number
-                      minimum: 0
-                      description: Trans fat (g)
-                    cholesterol_mg:
-                      type: number
-                      minimum: 0
-                      description: Cholesterol (mg)
-                    sodium_mg:
-                      type: number
-                      minimum: 0
-                      description: Sodium (mg)
-                    potassium_mg:
-                      type: number
-                      minimum: 0
-                      description: Potassium (mg)
-                    calcium_mg:
-                      type: number
-                      minimum: 0
-                      description: Calcium (mg)
-                    iron_mg:
-                      type: number
-                      minimum: 0
-                      description: Iron (mg)
-                    magnesium_mg:
-                      type: number
-                      minimum: 0
-                      description: Magnesium (mg)
-                    phosphorus_mg:
-                      type: number
-                      minimum: 0
-                      description: Phosphorus (mg)
-                    zinc_mg:
-                      type: number
-                      minimum: 0
-                      description: Zinc (mg)
-                    selenium_mcg:
-                      type: number
-                      minimum: 0
-                      description: Selenium (mcg)
-                    copper_mg:
-                      type: number
-                      minimum: 0
-                      description: Copper (mg)
-                    manganese_mg:
-                      type: number
-                      minimum: 0
-                      description: Manganese (mg)
-                    vitamin_a_mcg:
-                      type: number
-                      minimum: 0
-                      description: Vitamin A (mcg RAE)
-                    vitamin_c_mg:
-                      type: number
-                      minimum: 0
-                      description: Vitamin C (mg)
-                    vitamin_d_mcg:
-                      type: number
-                      minimum: 0
-                      description: Vitamin D (mcg)
-                    vitamin_e_mg:
-                      type: number
-                      minimum: 0
-                      description: Vitamin E (mg)
-                    vitamin_k_mcg:
-                      type: number
-                      minimum: 0
-                      description: Vitamin K (mcg)
-                    thiamin_mg:
-                      type: number
-                      minimum: 0
-                      description: Thiamin B1 (mg)
-                    riboflavin_mg:
-                      type: number
-                      minimum: 0
-                      description: Riboflavin B2 (mg)
-                    niacin_mg:
-                      type: number
-                      minimum: 0
-                      description: Niacin B3 (mg)
-                    vitamin_b6_mg:
-                      type: number
-                      minimum: 0
-                      description: Vitamin B6 (mg)
-                    folate_mcg:
-                      type: number
-                      minimum: 0
-                      description: Folate (mcg DFE)
-                    vitamin_b12_mcg:
-                      type: number
-                      minimum: 0
-                      description: Vitamin B12 (mcg)
+                  $ref: '#/components/schemas/Nutrition'
       responses:
         '200':
           description: Product updated
@@ -318,8 +192,7 @@ paths:
                           type: string
                         description: Optional ingredients to seed/update catalog
                       nutrition:
-                        type: object
-                        description: Optional per-unit nutrition facts to seed/update catalog
+                        $ref: '#/components/schemas/Nutrition'
       responses:
         '201':
           description: Stock updated
@@ -618,5 +491,151 @@ components:
           type: number
           minimum: 0
       additionalProperties: false
+    ServingInfo:
+      type: object
+      additionalProperties: false
+      properties:
+        serving_size_g:
+          type: number
+          minimum: 0
+        servings_per_container:
+          type: number
+          minimum: 0
+    NutritionFacts:
+      type: object
+      additionalProperties: false
+      properties:
+        calories:
+          type: number
+          minimum: 0
+          description: Energy in kcal
+        protein:
+          type: number
+          minimum: 0
+          description: Protein (g)
+        fat:
+          type: number
+          minimum: 0
+          description: Fat (g)
+        carbs:
+          type: number
+          minimum: 0
+          description: Carbohydrates (g)
+        fiber:
+          type: number
+          minimum: 0
+          description: Fiber (g)
+        sugars:
+          type: number
+          minimum: 0
+          description: Sugars (g)
+        saturated_fat:
+          type: number
+          minimum: 0
+          description: Saturated fat (g)
+        trans_fat:
+          type: number
+          minimum: 0
+          description: Trans fat (g)
+        cholesterol_mg:
+          type: number
+          minimum: 0
+          description: Cholesterol (mg)
+        sodium_mg:
+          type: number
+          minimum: 0
+          description: Sodium (mg)
+        potassium_mg:
+          type: number
+          minimum: 0
+          description: Potassium (mg)
+        calcium_mg:
+          type: number
+          minimum: 0
+          description: Calcium (mg)
+        iron_mg:
+          type: number
+          minimum: 0
+          description: Iron (mg)
+        magnesium_mg:
+          type: number
+          minimum: 0
+          description: Magnesium (mg)
+        phosphorus_mg:
+          type: number
+          minimum: 0
+          description: Phosphorus (mg)
+        zinc_mg:
+          type: number
+          minimum: 0
+          description: Zinc (mg)
+        selenium_mcg:
+          type: number
+          minimum: 0
+          description: Selenium (mcg)
+        copper_mg:
+          type: number
+          minimum: 0
+          description: Copper (mg)
+        manganese_mg:
+          type: number
+          minimum: 0
+          description: Manganese (mg)
+        vitamin_a_mcg:
+          type: number
+          minimum: 0
+          description: Vitamin A (mcg RAE)
+        vitamin_c_mg:
+          type: number
+          minimum: 0
+          description: Vitamin C (mg)
+        vitamin_d_mcg:
+          type: number
+          minimum: 0
+          description: Vitamin D (mcg)
+        vitamin_e_mg:
+          type: number
+          minimum: 0
+          description: Vitamin E (mg)
+        vitamin_k_mcg:
+          type: number
+          minimum: 0
+          description: Vitamin K (mcg)
+        thiamin_mg:
+          type: number
+          minimum: 0
+          description: Thiamin B1 (mg)
+        riboflavin_mg:
+          type: number
+          minimum: 0
+          description: Riboflavin B2 (mg)
+        niacin_mg:
+          type: number
+          minimum: 0
+          description: Niacin B3 (mg)
+        vitamin_b6_mg:
+          type: number
+          minimum: 0
+          description: Vitamin B6 (mg)
+        folate_mcg:
+          type: number
+          minimum: 0
+          description: Folate (mcg DFE)
+        vitamin_b12_mcg:
+          type: number
+          minimum: 0
+          description: Vitamin B12 (mcg)
+    Nutrition:
+      type: object
+      additionalProperties: false
+      properties:
+        serving:
+          $ref: '#/components/schemas/ServingInfo'
+        per_serving:
+          $ref: '#/components/schemas/NutritionFacts'
+        per_100g:
+          $ref: '#/components/schemas/NutritionFacts'
+        per_container:
+          $ref: '#/components/schemas/NutritionFacts'
 security:
   - ApiKeyAuth: []

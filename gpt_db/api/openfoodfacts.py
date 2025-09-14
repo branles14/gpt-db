@@ -101,6 +101,6 @@ async def fetch_product(upc: str) -> dict | None:
         if num:
             nutrition[dst] = num
     if nutrition:
-        result["nutrition"] = nutrition
+        result["nutrition"] = {"per_100g": nutrition}
 
     return result or None

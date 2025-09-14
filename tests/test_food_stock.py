@@ -46,7 +46,7 @@ def test_add_stock_fetches_and_inserts_product(monkeypatch):
         assert item["upc"] == "12345"
         assert "snacks" in item["tags"]
         assert "Sugar" in item["ingredients"]
-        assert item["nutrition"]["calories"] == 100
+        assert item["nutrition"]["per_100g"]["calories"] == 100
 
         stock_resp = client.get("/stock?view=items", headers={"x-api-key": "secret"})
         stock_item = stock_resp.json()["items"][0]

@@ -21,17 +21,18 @@ A unified [OpenAPI 3.1 specification](openapi.yaml) consolidates all routes unde
     - Update: if an item with the provided `upc` exists, performs a partial merge:
       only the fields you include are modified; other fields remain unchanged.
       To clear a field, send it explicitly as `null`.
-    - Accepts optional `tags`, `ingredients`, and a nested `nutrition` object with
-      macros, vitamins, and minerals per unit. For backward compatibility,
-      top‑level macro fields (`calories`, `protein`, `fat`, `carbs`) are accepted
-      and merged into `nutrition`. Unspecified nutrition properties default to `0`.
-      For example:
+      - Accepts optional `tags`, `ingredients`, and a nested `nutrition` object
+        containing optional serving info and up to three `NutritionFacts`
+        blocks: `per_serving`, `per_100g`, and `per_container`. For backward
+        compatibility, top‑level macro fields (`calories`, `protein`, `fat`,
+        `carbs`) are merged into `nutrition.per_serving`. Unspecified nutrition
+        properties default to `0`. For example:
 
-      ```json
-      { "name": "CalOnly", "nutrition": { "calories": 10 } }
-      ```
+        ```json
+        { "name": "CalOnly", "nutrition": { "per_serving": { "calories": 10 } } }
+        ```
 
-      persists every other nutrition field as `0`.
+        persists every other per-serving field as `0`.
     Note: UPC must be provided as a JSON string of digits (e.g., "070662404072"); numeric values will be rejected to prevent loss of leading zeros.
   - `GET /catalog/{product_id}` – retrieve a product.
   - `DELETE /catalog/{product_id}` – delete a product (`force=true` to bypass reference checks).
@@ -96,7 +97,7 @@ Response when the UPC is missing from the catalog:
     "upc": "737628064502",
     "name": "Sriracha Sauce",
     "tags": ["sauces"],
-    "nutrition": { "calories": 93, "protein": 1.2, "fat": 0.8, "carbs": 20 }
+      "nutrition": { "per_100g": { "calories": 93, "protein": 1.2, "fat": 0.8, "carbs": 20 } }
   }
 }
 ```
@@ -172,22 +173,24 @@ curl -sS -X POST \
   -H "Content-Type: application/json" \
   -H "x-api-key: ${API_KEY}" \
   -d '{
-        "upc": "0001",
-        "name": "Apple",
-        "tags": ["fruit"],
-        "ingredients": ["apple"],
-        "nutrition": {
-          "calories": 95,
-          "protein": 0.5,
-          "fat": 0.3,
-          "carbs": 25,
-          "fiber": 4.4,
-          "vitamin_c_mg": 8.4,
-          "potassium_mg": 195
-        }
+         "upc": "0001",
+         "name": "Apple",
+         "tags": ["fruit"],
+         "ingredients": ["apple"],
+         "nutrition": {
+           "per_serving": {
+             "calories": 95,
+             "protein": 0.5,
+             "fat": 0.3,
+             "carbs": 25,
+             "fiber": 4.4,
+             "vitamin_c_mg": 8.4,
+             "potassium_mg": 195
+           }
+         }
       }' \
   http://localhost:${PORT:-8000}/catalog
-# -> {"success": true, "message": "Product created", "item": {"_id": "...", "upc": "0001", "name": "Apple", "tags": ["fruit"], "ingredients": ["apple"], "nutrition": {"calories":95,"protein":0.5,"fat":0.3,"carbs":25,"fiber":4.4,"vitamin_c_mg":8.4,"potassium_mg":195}}}
+# -> {"success": true, "message": "Product created", "item": {"_id": "...", "upc": "0001", "name": "Apple", "tags": ["fruit"], "ingredients": ["apple"], "nutrition": {"per_serving": {"calories":95,"protein":0.5,"fat":0.3,"carbs":25,"fiber":4.4,"vitamin_c_mg":8.4,"potassium_mg":195}}}}
 ```
 
 - Partially update an existing product by UPC (merge update):
@@ -197,19 +200,19 @@ curl -sS -X POST \
   -H "Content-Type: application/json" \
   -H "x-api-key: ${API_KEY}" \
   -d '{
-        "upc": "0001",
-        "nutrition": { "calories": 100 }
+         "upc": "0001",
+         "nutrition": { "per_serving": { "calories": 100 } }
       }' \
   http://localhost:${PORT:-8000}/catalog
-# -> {"success": true, "message": "Product updated", "item": { ... "nutrition": { ... "calories": 100, ... } }}
+# -> {"success": true, "message": "Product updated", "item": { ... "nutrition": {"per_serving": { ... "calories": 100, ... }} }}
 
 # Clear a field by sending null (example: remove calories):
 curl -sS -X POST \
   -H "Content-Type: application/json" \
   -H "x-api-key: ${API_KEY}" \
   -d '{
-        "upc": "0001",
-        "nutrition": { "calories": null }
+         "upc": "0001",
+         "nutrition": { "per_serving": { "calories": null } }
       }' \
   http://localhost:${PORT:-8000}/catalog
 ```
@@ -230,8 +233,8 @@ curl -sS -X POST \
   -H "Content-Type: application/json" \
   -H "x-api-key: ${API_KEY}" \
   -d '{
-        "upc": "0001",
-        "nutrition": {"calories": 95, "protein": 0.5, "fat": 0.3, "carbs": 25}
+         "upc": "0001",
+         "nutrition": {"per_serving": {"calories": 95, "protein": 0.5, "fat": 0.3, "carbs": 25}}
       }' \
   http://localhost:${PORT:-8000}/catalog
 # -> {"success": true, "message": "Product updated", ...}
@@ -259,7 +262,7 @@ curl -sS -X POST \
         "name": "Banana",
         "tags": ["fruit"],
         "ingredients": ["banana"],
-        "nutrition": {"calories": 105, "protein": 1.3, "carbs": 27}
+         "nutrition": {"per_serving": {"calories": 105, "protein": 1.3, "carbs": 27}}
       }]}' \
   http://localhost:${PORT:-8000}/stock
 ```
@@ -356,7 +359,7 @@ python tests/simulate-use.py list --api-key ${API_KEY} --api-url http://localhos
   - Ensure `x-api-key` is included; read endpoints will also require it, but double‑check the write.
   - Check that UPC is a quoted string of digits. Example valid payload snippet:
     ```json
-    {"upc":"070662404072","name":"Example","nutrition":{"calories":100}}
+      {"upc":"070662404072","name":"Example","nutrition":{"per_serving":{"calories":100}}}
     ```
     Invalid examples: `{ "upc": 70662404072 }`, `{ "upc": "07066-2404072" }`.
   - If you post empty arrays for `tags` or `ingredients`, validation fails. Omit the fields instead.
