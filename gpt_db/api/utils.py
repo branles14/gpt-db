@@ -41,18 +41,16 @@ def format_mongo_error(exc: Exception) -> Dict[str, Any]:
     if "Authentication failed" in message:
         return {
             "success": False,
-            "error": True,
-            "type": "DatabaseAuthenticationError",
-            "message": (
+            "error": (
                 "Unable to connect to MongoDB: authentication failed. "
                 "Please check your username, password, or connection string."
             ),
+            "type": "DatabaseAuthenticationError",
             "code": 8000,
             "service": "MongoDB Atlas",
         }
     return {
         "success": False,
-        "error": True,
+        "error": "Failed to connect to MongoDB.",
         "type": "DatabaseConnectionError",
-        "message": "Failed to connect to MongoDB.",
     }
