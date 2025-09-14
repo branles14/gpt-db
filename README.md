@@ -9,7 +9,7 @@ A unified [OpenAPI 3.1 specification](openapi.yaml) consolidates all routes unde
 ## Endpoints
 
 - `/`: Returns `{ "message": "🍌" }` when the API key is valid.
-- `/health`: Reports overall service status and component checks (e.g. MongoDB). Requires `x-api-key` header.
+- `/api/health`: Reports overall service status and component checks (e.g. MongoDB). Requires `x-api-key` header.
 - `/list`: Lists MongoDB collections across accessible databases. Requires `x-api-key` header.
   - Unauthorized requests receive a playful randomized error message.
 - `/docs`, `/openapi.json`: Interactive API docs, no API key required.
@@ -154,7 +154,7 @@ curl -sS \
 ```bash
 curl -sS \
   -H "x-api-key: ${API_KEY}" \
-  http://localhost:${PORT:-8000}/health
+    http://localhost:${PORT:-8000}/api/health
 # -> {"status": "ok", "components": {"mongo": "ok"}}
 ```
 
@@ -436,7 +436,7 @@ curl -sS -H "x-api-key: ${API_KEY}" "${API_URL}"
 # -> {"message":"🍌"}
 
 # Service health
-curl -sS -H "x-api-key: ${API_KEY}" "${API_URL}/health"
+curl -sS -H "x-api-key: ${API_KEY}" "${API_URL}/api/health"
 # -> {"mongo":{"status":"ok"}}
 
 # Collections

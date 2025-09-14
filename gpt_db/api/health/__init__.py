@@ -7,7 +7,7 @@ from .service import mongo_status
 router = APIRouter()
 
 
-@router.get("/health", dependencies=[Depends(require_api_key)])
+@router.get("/api/health", dependencies=[Depends(require_api_key)])
 async def health() -> JSONResponse:
     """Report service health information."""
     mongo = await mongo_status()
