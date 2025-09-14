@@ -13,7 +13,7 @@ from pymongo import ReturnDocument
 from gpt_db.api.deps import require_api_key
 from gpt_db.api.utils import format_mongo_error, success_response, error_response
 from gpt_db.db.mongo import get_mongo_client
-from gpt_db.api.catalog import NutritionFacts
+from gpt_db.api.catalog import NutritionFacts, NutritionBreakdown
 from gpt_db.api.openfoodfacts import fetch_product
 
 router = APIRouter(prefix="/stock", tags=["stock"])
@@ -33,7 +33,7 @@ class StockItem(BaseModel):
     name: Optional[str] = None
     tags: Optional[List[str]] = Field(default=None, min_length=1)
     ingredients: Optional[List[str]] = Field(default=None, min_length=1)
-    nutrition: Optional[NutritionFacts] = None
+    nutrition: Optional[NutritionBreakdown] = None
 
     @field_validator("upc", mode="before")
     @classmethod
@@ -207,7 +207,6 @@ async def add_food_stock(payload: AddStockRequest) -> JSONResponse:
                 # Build incoming nutrition (prefer nested; merge any top-level macros provided as extras)
                 incoming_nutrition: Dict[str, Any] | None = None
                 if "nutrition" in item_data:
-                    # Pydantic model dumps to dict already
                     incoming_nutrition = dict(item_data["nutrition"])  # type: ignore[arg-type]
                 macro_keys = ("calories", "protein", "fat", "carbs", "fiber", "sugars")
                 macro_payload = {
@@ -216,7 +215,9 @@ async def add_food_stock(payload: AddStockRequest) -> JSONResponse:
                     if k in item_data and item_data[k] is not None
                 }
                 if macro_payload:
-                    incoming_nutrition = {**(incoming_nutrition or {}), **macro_payload}
+                    ps = dict((incoming_nutrition or {}).get("per_serving") or {})
+                    ps.update(macro_payload)
+                    incoming_nutrition = {**(incoming_nutrition or {}), "per_serving": ps}
 
                 if product_doc:
                     # Prepare $set updates only when values change or extend existing arrays
@@ -250,7 +251,13 @@ async def add_food_stock(payload: AddStockRequest) -> JSONResponse:
 
                     if incoming_nutrition:
                         existing_nutrition = product_doc.get("nutrition") or {}
-                        merged_nutrition = {**existing_nutrition, **incoming_nutrition}
+                        merged_nutrition = existing_nutrition.copy()
+                        for key, value in incoming_nutrition.items():
+                            if key in ("per_serving", "per_100g", "per_container") and isinstance(value, dict):
+                                merged = {**existing_nutrition.get(key, {}), **value}
+                                merged_nutrition[key] = merged
+                            else:
+                                merged_nutrition[key] = value
                         if merged_nutrition != existing_nutrition:
                             catalog_set["nutrition"] = merged_nutrition
 
@@ -279,9 +286,13 @@ async def add_food_stock(payload: AddStockRequest) -> JSONResponse:
                 # Nutrition: prefer nested object, else synthesize from top-level macros
                 nutrition = product_doc.get("nutrition") or {}
                 if not nutrition:
-                    for k in ("calories", "protein", "fat", "carbs", "fiber", "sugars"):
-                        if k in product_doc and product_doc[k] is not None:
-                            nutrition[k] = product_doc[k]
+                    macros = {
+                        k: product_doc[k]
+                        for k in ("calories", "protein", "fat", "carbs", "fiber", "sugars")
+                        if product_doc.get(k) is not None
+                    }
+                    if macros:
+                        nutrition = {"per_serving": macros}
                 if nutrition:
                     set_fields["nutrition"] = nutrition
 

@@ -72,6 +72,26 @@ class NutritionFacts(BaseModel):
     vitamin_b12_mcg: float = Field(default=0, ge=0)
 
 
+class ServingInfo(BaseModel):
+    """Serving size details."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    serving_size_g: Optional[float] = Field(default=None, ge=0)
+    servings_per_container: Optional[float] = Field(default=None, ge=0)
+
+
+class NutritionBreakdown(BaseModel):
+    """Nutrition facts broken down by measurement basis."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    serving: Optional[ServingInfo] = None
+    per_serving: Optional[NutritionFacts] = None
+    per_100g: Optional[NutritionFacts] = None
+    per_container: Optional[NutritionFacts] = None
+
+
 class ProductBase(BaseModel):
     """Shared fields and validators for product models."""
 
@@ -84,7 +104,7 @@ class ProductBase(BaseModel):
     ingredients: Optional[List[str]] = Field(default=None, min_length=1)
 
     # Nested nutrition object (preferred)
-    nutrition: Optional[NutritionFacts] = None
+    nutrition: Optional[NutritionBreakdown] = None
 
     # Deprecated: accept top-level macros for backward compatibility
     calories: Optional[float] = Field(default=None, ge=0)
@@ -140,9 +160,15 @@ class ProductBase(BaseModel):
             if v is not None
         }
         if provided:
-            base = self.nutrition.model_dump(exclude_none=True) if self.nutrition else {}
-            base.update(provided)
-            self.nutrition = NutritionFacts(**base)
+            existing = (
+                self.nutrition.per_serving.model_dump(exclude_none=True)
+                if self.nutrition and self.nutrition.per_serving
+                else {}
+            )
+            existing.update(provided)
+            nb = self.nutrition or NutritionBreakdown()
+            nb.per_serving = NutritionFacts(**existing)
+            self.nutrition = nb
             # Clear deprecated top-level fields to avoid storing duplicates
             self.calories = None
             self.protein = None
@@ -293,17 +319,30 @@ async def upsert_product(payload: Dict[str, Any]) -> JSONResponse:
         upc = payload.get("upc")
 
         def build_nutrition(p: Dict[str, Any]) -> Dict[str, Any]:
-            """Return a full NutritionFacts dict with zeros for missing fields."""
-            nutrition_data: Dict[str, Any] = dict(p.get("nutrition") or {})
+            """Return a normalized nutrition breakdown."""
+            incoming: Dict[str, Any] = dict(p.get("nutrition") or {})
+            per_serving: Dict[str, Any] = dict(incoming.get("per_serving") or {})
             for m in ("calories", "protein", "fat", "carbs"):
                 if m in p:
-                    nutrition_data[m] = p[m]
-            unset_fields = {k for k, v in nutrition_data.items() if v is None}
-            clean = {k: v for k, v in nutrition_data.items() if v is not None}
-            facts = NutritionFacts(**clean).model_dump()
-            for k in unset_fields:
-                facts[k] = None
-            return facts
+                    per_serving[m] = p[m]
+            if per_serving:
+                incoming["per_serving"] = per_serving
+
+            def normalize_facts(data: Dict[str, Any]) -> Dict[str, Any]:
+                unset = {k for k, v in data.items() if v is None}
+                clean = {k: v for k, v in data.items() if v is not None}
+                facts = NutritionFacts(**clean).model_dump()
+                for k in unset:
+                    facts[k] = None
+                return facts
+
+            result: Dict[str, Any] = {}
+            if "serving" in incoming:
+                result["serving"] = ServingInfo(**incoming["serving"]).model_dump()
+            for key in ("per_serving", "per_100g", "per_container"):
+                if key in incoming:
+                    result[key] = normalize_facts(incoming[key])
+            return result
 
         if upc:
             # Does a product with this UPC already exist?

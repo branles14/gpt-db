@@ -33,7 +33,7 @@ Important: UPC must be a JSON string of digits. Leading zeros are significant an
 curl -sS -X POST \
   -H "Content-Type: application/json" \
   -H "x-api-key: ${API_KEY}" \
-  -d '{"upc":"0001","name":"Apple","tags":["fruit"],"ingredients":["apple"],"nutrition":{"calories":95,"protein":0.5,"fat":0.3,"carbs":25,"fiber":4.4}}' \
+  -d '{"upc":"0001","name":"Apple","tags":["fruit"],"ingredients":["apple"],"nutrition":{"per_serving":{"calories":95,"protein":0.5,"fat":0.3,"carbs":25,"fiber":4.4}}}' \
   https://<host>/catalog
 ```
 
@@ -47,7 +47,7 @@ curl -sS -X POST \
     "name": "Apple",
     "tags": ["fruit"],
     "ingredients": ["apple"],
-    "nutrition": { "calories": 95, "protein": 0.5, "fat": 0.3, "carbs": 25, "fiber": 4.4 }
+    "nutrition": { "per_serving": { "calories": 95, "protein": 0.5, "fat": 0.3, "carbs": 25, "fiber": 4.4 } }
   }
 }
 ```
@@ -269,7 +269,7 @@ Add and sync details into catalog:
 curl -sS -X POST \
   -H "Content-Type: application/json" \
   -H "x-api-key: ${API_KEY}" \
-  -d '{"items":[{"upc":"0002","quantity":2,"name":"Banana","tags":["fruit"],"ingredients":["banana"],"nutrition":{"calories":105,"protein":1.3}}]}' \
+  -d '{"items":[{"upc":"0002","quantity":2,"name":"Banana","tags":["fruit"],"ingredients":["banana"],"nutrition":{"per_serving":{"calories":105,"protein":1.3}}}]}' \
   https://<host>/stock
 ```
 

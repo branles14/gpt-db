@@ -2,29 +2,29 @@ from mock_mongo import create_client
 
 
 def test_unknown_nutrition_key_returns_422(monkeypatch):
-    payload = {"name": "Mystery", "nutrition": {"calories": 10, "bogus": 1}}
+    payload = {"name": "Mystery", "nutrition": {"per_serving": {"calories": 10, "bogus": 1}}}
     with create_client(monkeypatch) as client:
         resp = client.post("/catalog", json=payload, headers={"x-api-key": "secret"})
         assert resp.status_code == 422
 
 
 def test_empty_nutrition_defaults_to_zero(monkeypatch):
-    payload = {"name": "Empty", "nutrition": {}}
+    payload = {"name": "Empty", "nutrition": {"per_serving": {}}}
     with create_client(monkeypatch) as client:
         resp = client.post("/catalog", json=payload, headers={"x-api-key": "secret"})
         assert resp.status_code == 201
         item = resp.json()["item"]
-        assert all(v == 0 for v in item["nutrition"].values())
+        assert all(v == 0 for v in item["nutrition"]["per_serving"].values())
 
 
 def test_partial_nutrition_defaults_to_zero(monkeypatch):
-    payload = {"name": "Partial", "nutrition": {"calories": 10}}
+    payload = {"name": "Partial", "nutrition": {"per_serving": {"calories": 10}}}
     with create_client(monkeypatch) as client:
         resp = client.post("/catalog", json=payload, headers={"x-api-key": "secret"})
         assert resp.status_code == 201
         item = resp.json()["item"]
-        assert item["nutrition"]["calories"] == 10
-        for k, v in item["nutrition"].items():
+        assert item["nutrition"]["per_serving"]["calories"] == 10
+        for k, v in item["nutrition"]["per_serving"].items():
             if k != "calories":
                 assert v == 0
 
@@ -62,7 +62,7 @@ def test_full_nutrition_persists(monkeypatch):
         "folate_mcg": 21,
         "vitamin_b12_mcg": 22,
     }
-    payload = {"name": "Complete", "nutrition": nutrition}
+    payload = {"name": "Complete", "nutrition": {"per_serving": nutrition}}
     with create_client(monkeypatch) as client:
         resp = client.post("/catalog", json=payload, headers={"x-api-key": "secret"})
         assert resp.status_code == 201
@@ -71,6 +71,7 @@ def test_full_nutrition_persists(monkeypatch):
         assert list_resp.status_code == 200
         items = list_resp.json()["items"]
         assert any(
-            item["name"] == "Complete" and item["nutrition"] == nutrition for item in items
+            item["name"] == "Complete" and item["nutrition"]["per_serving"] == nutrition
+            for item in items
         )
 
