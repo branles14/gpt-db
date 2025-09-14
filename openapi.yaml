@@ -91,8 +91,11 @@ paths:
                   description: Ingredient list for the product
                 nutrition:
                   type: object
-                  description: Per-unit nutrition facts
+                  description: |
+                    Per-unit nutrition facts. Unspecified properties default to 0.
                   additionalProperties: false
+                  example:
+                    calories: 50
                   properties:
                     calories:
                       type: number

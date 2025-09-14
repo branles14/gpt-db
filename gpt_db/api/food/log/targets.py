@@ -1,7 +1,8 @@
-from typing import Dict
 
 from fastapi import APIRouter, Depends, status
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel, Field
+from pydantic.config import ConfigDict
 
 from gpt_db.api.deps import require_api_key
 from gpt_db.api.utils import format_mongo_error
@@ -10,6 +11,17 @@ from .common import DV_DEFAULTS, _get_targets
 
 
 router = APIRouter(prefix="/food", tags=["food"])
+
+
+class TargetUpdates(BaseModel):
+    """Payload for partial target updates."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    calories: float | None = Field(default=None, ge=0)
+    protein: float | None = Field(default=None, ge=0)
+    fat: float | None = Field(default=None, ge=0)
+    carbs: float | None = Field(default=None, ge=0)
 
 
 @router.get("/targets", dependencies=[Depends(require_api_key)])
@@ -28,14 +40,9 @@ async def get_targets() -> JSONResponse:
 
 
 @router.patch("/targets", dependencies=[Depends(require_api_key)])
-async def patch_targets(updates: Dict[str, float]) -> JSONResponse:
+async def patch_targets(updates: TargetUpdates) -> JSONResponse:
     """Partially update macro targets."""
-    # Simple validation: non-negative numbers for known keys
-    data: Dict[str, float] = {
-        k: float(v)
-        for k, v in updates.items()
-        if k in DV_DEFAULTS and isinstance(v, (int, float)) and float(v) >= 0
-    }
+    data = updates.model_dump(exclude_none=True)
     if not data:
         return JSONResponse(
             status_code=status.HTTP_400_BAD_REQUEST,
